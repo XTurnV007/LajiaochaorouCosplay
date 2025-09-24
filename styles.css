@@ -1,0 +1,777 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Microsoft YaHei', sans-serif;
+    background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+    color: #ecf0f1;
+    min-height: 100vh;
+}
+
+.screen {
+    display: none;
+    min-height: 100vh;
+    padding: 20px;
+}
+
+.screen.active {
+    display: block;
+}
+
+/* 案件陈述界面 */
+.briefing-container {
+    max-width: 800px;
+    margin: 0 auto;
+    text-align: center;
+    padding: 40px 20px;
+}
+
+.briefing-container h1 {
+    font-size: 3em;
+    margin-bottom: 10px;
+    color: #e74c3c;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+}
+
+.briefing-container h2 {
+    font-size: 1.8em;
+    margin-bottom: 40px;
+    color: #f39c12;
+}
+
+.briefing-content {
+    background: rgba(0,0,0,0.3);
+    padding: 30px;
+    border-radius: 10px;
+    margin-bottom: 30px;
+    text-align: left;
+    line-height: 1.8;
+}
+
+.briefing-content p {
+    margin-bottom: 15px;
+    font-size: 1.1em;
+}
+
+.briefing-content strong {
+    color: #e74c3c;
+}
+
+/* 按钮样式 */
+.primary-btn {
+    background: #e74c3c;
+    color: white;
+    border: none;
+    padding: 15px 30px;
+    font-size: 1.2em;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.primary-btn:hover {
+    background: #c0392b;
+    transform: translateY(-2px);
+}
+
+.secondary-btn {
+    background: #95a5a6;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    font-size: 1em;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.secondary-btn:hover {
+    background: #7f8c8d;
+}
+
+/* 调查界面 */
+.investigation-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 10px;
+}
+
+.investigation-nav {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 30px;
+    background: rgba(0,0,0,0.3);
+    padding: 10px;
+    border-radius: 10px;
+}
+
+.nav-btn {
+    flex: 1;
+    padding: 15px;
+    background: transparent;
+    color: #bdc3c7;
+    border: 1px solid #34495e;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.nav-btn:hover, .nav-btn.active {
+    background: #3498db;
+    color: white;
+    border-color: #3498db;
+}
+
+.nav-btn.accusation-btn:hover, .nav-btn.accusation-btn.active {
+    background: #e74c3c;
+    border-color: #e74c3c;
+}
+
+.panel {
+    display: none;
+    background: rgba(0,0,0,0.3);
+    padding: 30px;
+    border-radius: 10px;
+}
+
+.panel.active {
+    display: block;
+}
+
+.panel h3 {
+    margin-bottom: 20px;
+    color: #f39c12;
+    font-size: 1.5em;
+}
+
+/* 嫌疑人卡片 */
+.suspects-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+}
+
+.suspect-card {
+    background: rgba(255,255,255,0.1);
+    padding: 20px;
+    border-radius: 10px;
+    text-align: center;
+    transition: transform 0.3s ease;
+}
+
+.suspect-card:hover {
+    transform: translateY(-5px);
+}
+
+.suspect-avatar {
+    font-size: 3em;
+    margin-bottom: 10px;
+}
+
+.suspect-card h4 {
+    margin-bottom: 10px;
+    color: #e74c3c;
+}
+
+.suspect-card p {
+    margin-bottom: 15px;
+    color: #bdc3c7;
+}
+
+.interrogate-btn {
+    background: #3498db;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.interrogate-btn:hover {
+    background: #2980b9;
+}
+
+/* 证物袋 */
+.evidence-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 15px;
+}
+
+.evidence-item {
+    background: rgba(255,255,255,0.1);
+    padding: 15px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.evidence-item:hover {
+    background: rgba(255,255,255,0.2);
+}
+
+.evidence-item.selected {
+    background: #f39c12;
+    color: white;
+}
+
+.no-evidence {
+    text-align: center;
+    color: #7f8c8d;
+    font-style: italic;
+}
+
+/* 现场调查 */
+#scene-panel {
+    text-align: center;
+}
+
+.scene-description {
+    background: rgba(255,255,255,0.1);
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    line-height: 1.6;
+    text-align: center;
+}
+
+.scene-tips {
+    margin-top: 10px;
+    padding: 8px;
+    background: rgba(241, 196, 15, 0.2);
+    border-radius: 5px;
+    border-left: 3px solid #f1c40f;
+}
+
+.scene-tips small {
+    color: #f39c12;
+}
+
+.scene-image-container {
+    position: relative;
+    display: block;
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto 20px;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+}
+
+#crime-scene-image {
+    width: 100%;
+    height: auto;
+    min-height: 400px;
+    max-height: 80vh;
+    object-fit: contain;
+    display: block;
+    cursor: crosshair;
+    background: #1a1a1a;
+}
+
+.hotspot {
+    position: absolute;
+    border: 2px solid transparent;
+    border-radius: 50%;
+    background: rgba(231, 76, 60, 0.3);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    opacity: 0;
+}
+
+.hotspot:hover {
+    background: rgba(231, 76, 60, 0.6);
+    border-color: #e74c3c;
+    transform: scale(1.1);
+}
+
+.hotspot.visible {
+    opacity: 1;
+}
+
+.hotspot.investigated {
+    background: rgba(46, 204, 113, 0.4);
+    border-color: #2ecc71;
+}
+
+/* 热点区域定位 (基于图片百分比) */
+/* 尸体 - 位于图片中央偏下的武士尸体 */
+#hotspot-body {
+    width: 10%;
+    height: 12%;
+    min-width: 60px;
+    min-height: 50px;
+    top: 55%;
+    left: 40%;
+    border-radius: 50%;
+}
+
+/* 断剑 - 位于尸体下方的断裂太刀 */
+#hotspot-sword {
+    width: 6%;
+    height: 5%;
+    min-width: 50px;
+    min-height: 20px;
+    top: 83%;
+    left: 42%;
+    border-radius: 25px;
+}
+
+/* 竹林 - 位于左上方的竹子区域 */
+#hotspot-trees {
+    width: 8%;
+    height: 15%;
+    min-width: 70px;
+    min-height: 80px;
+    top: 34%;
+    left: 76%;
+}
+
+/* 地面搜索 - 位于右下方的地面区域 */
+#hotspot-ground {
+    width: 10%;
+    height: 6%;
+    min-width: 80px;
+    min-height: 40px;
+    top: 87%;
+    left: 68%;
+    border-radius: 50%;
+}
+
+/* 茶花丛 - 位于左下方的红色花朵区域 */
+#hotspot-flowers {
+    width: 12%;
+    height: 12%;
+    min-width: 60px;
+    min-height: 60px;
+    top: 75%;
+    left: 8%;
+}
+
+/* 武士腰间的匕首*/
+#hotspot-rope {
+    width: 6%;
+    height: 8%;
+    min-width: 50px;
+    min-height: 50px;
+    top: 65%;
+    left: 50%;
+}
+
+.scene-controls {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+
+.scene-controls button {
+    padding: 8px 16px;
+    font-size: 0.9em;
+}
+
+.scene-results {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.scene-result {
+    background: rgba(255,255,255,0.1);
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    border-left: 4px solid #27ae60;
+}
+
+/* 审问界面 */
+.interrogation-container {
+    max-width: 800px;
+    margin: 0 auto;
+    height: calc(100vh - 40px);
+    display: flex;
+    flex-direction: column;
+}
+
+.interrogation-header {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    margin-bottom: 20px;
+    padding: 15px;
+    background: rgba(0,0,0,0.3);
+    border-radius: 10px;
+}
+
+.back-btn {
+    background: #95a5a6;
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.back-btn:hover {
+    background: #7f8c8d;
+}
+
+.chat-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: rgba(0,0,0,0.3);
+    border-radius: 10px;
+    padding: 20px;
+}
+
+.chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    margin-bottom: 20px;
+    padding-right: 10px;
+}
+
+.message {
+    margin-bottom: 15px;
+    padding: 12px 15px;
+    border-radius: 10px;
+    max-width: 80%;
+}
+
+.message.player {
+    background: #3498db;
+    margin-left: auto;
+    text-align: right;
+}
+
+.message.npc {
+    background: rgba(255,255,255,0.1);
+    margin-right: auto;
+}
+
+.message.system {
+    background: #f39c12;
+    margin: 0 auto;
+    text-align: center;
+    max-width: 90%;
+}
+
+.evidence-toolbar {
+    margin-bottom: 15px;
+    padding: 10px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 8px;
+}
+
+.available-evidence {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+}
+
+.evidence-btn {
+    background: #f39c12;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: all 0.3s ease;
+}
+
+.evidence-btn:hover {
+    background: #e67e22;
+}
+
+.chat-input-container {
+    display: flex;
+    gap: 10px;
+}
+
+#chat-input {
+    flex: 1;
+    padding: 12px;
+    border: 1px solid #34495e;
+    border-radius: 5px;
+    background: rgba(255,255,255,0.1);
+    color: white;
+    font-size: 1em;
+}
+
+#chat-input::placeholder {
+    color: #bdc3c7;
+}
+
+#send-message {
+    background: #27ae60;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+#send-message:hover {
+    background: #229954;
+}
+
+.voice-btn {
+    background: #9b59b6;
+    color: white;
+    border: none;
+    padding: 12px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 1.2em;
+    min-width: 50px;
+}
+
+.voice-btn:hover {
+    background: #8e44ad;
+}
+
+.voice-btn.recording {
+    background: #e74c3c;
+    animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
+@keyframes hotspotPulse {
+    0% { 
+        box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.7);
+        transform: scale(1);
+    }
+    70% { 
+        box-shadow: 0 0 0 10px rgba(231, 76, 60, 0);
+        transform: scale(1.05);
+    }
+    100% { 
+        box-shadow: 0 0 0 0 rgba(231, 76, 60, 0);
+        transform: scale(1);
+    }
+}
+
+.hotspot.pulse-animation {
+    animation: hotspotPulse 2s infinite;
+}
+
+.voice-controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 10px;
+    padding: 10px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 8px;
+}
+
+.voice-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #bdc3c7;
+    cursor: pointer;
+}
+
+.voice-toggle input[type="checkbox"] {
+    margin: 0;
+}
+
+.api-config {
+    background: rgba(255,255,255,0.1);
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.api-config h4 {
+    margin-bottom: 10px;
+    color: #f39c12;
+}
+
+.api-config input {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #34495e;
+    border-radius: 4px;
+    background: rgba(255,255,255,0.1);
+    color: white;
+    margin-bottom: 10px;
+}
+
+.api-config input::placeholder {
+    color: #7f8c8d;
+}
+
+/* 结案指认界面 */
+.accusation-container {
+    max-width: 600px;
+    margin: 0 auto;
+    background: rgba(0,0,0,0.3);
+    padding: 40px;
+    border-radius: 10px;
+}
+
+.accusation-container h2 {
+    text-align: center;
+    margin-bottom: 30px;
+    color: #e74c3c;
+    font-size: 2em;
+}
+
+.form-group {
+    margin-bottom: 25px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    color: #f39c12;
+    font-weight: bold;
+}
+
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #34495e;
+    border-radius: 5px;
+    background: rgba(255,255,255,0.1);
+    color: white;
+    font-size: 1em;
+    font-family: inherit;
+}
+
+.form-group textarea {
+    min-height: 100px;
+    resize: vertical;
+}
+
+.form-group select option {
+    background: #2c3e50;
+    color: white;
+}
+
+.form-actions {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    margin-top: 30px;
+}
+
+/* 结果界面 */
+.result-container {
+    max-width: 800px;
+    margin: 0 auto;
+    text-align: center;
+    background: rgba(0,0,0,0.3);
+    padding: 40px;
+    border-radius: 10px;
+}
+
+.result-container h2 {
+    margin-bottom: 30px;
+    font-size: 2.5em;
+}
+
+.result-content {
+    background: rgba(255,255,255,0.1);
+    padding: 30px;
+    border-radius: 10px;
+    margin-bottom: 30px;
+    text-align: left;
+    line-height: 1.8;
+}
+
+.result-content h3 {
+    color: #f39c12;
+    margin-bottom: 15px;
+}
+
+.result-content p {
+    margin-bottom: 15px;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .suspects-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .investigation-nav {
+        flex-direction: column;
+    }
+    
+    .form-actions {
+        flex-direction: column;
+    }
+    
+    .chat-input-container {
+        flex-direction: column;
+    }
+    
+    /* 移动端现场调查优化 */
+    .scene-image-container {
+        max-width: 100%;
+        margin: 0 0 15px 0;
+    }
+    
+    #crime-scene-image {
+        min-height: 300px;
+        max-height: 60vh;
+    }
+    
+    .scene-controls {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .scene-controls button {
+        width: 100%;
+    }
+    
+    /* 移动端热点调整 */
+    .hotspot {
+        min-width: 40px !important;
+        min-height: 40px !important;
+    }
+}
+
+@media (min-width: 1200px) {
+    #crime-scene-image {
+        min-height: 500px;
+    }
+}
+
+/* 滚动条样式 */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(255,255,255,0.1);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #3498db;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #2980b9;
+}
