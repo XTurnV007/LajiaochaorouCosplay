@@ -374,6 +374,21 @@ body {
     font-size: 0.9em;
 }
 
+/* 证物袋区域 */
+.evidence-section {
+    background: rgba(255,255,255,0.1);
+    padding: 20px;
+    border-radius: 8px;
+    margin: 20px 0;
+    border-left: 4px solid #f39c12;
+}
+
+.evidence-section h4 {
+    margin: 0 0 15px 0;
+    color: #f39c12;
+    font-size: 1.2em;
+}
+
 .scene-results {
     max-height: 400px;
     overflow-y: auto;
@@ -385,6 +400,16 @@ body {
     border-radius: 8px;
     margin-bottom: 10px;
     border-left: 4px solid #27ae60;
+}
+
+.scene-result.repeat {
+    background: rgba(149, 165, 166, 0.1);
+    border-left-color: #95a5a6;
+    opacity: 0.8;
+}
+
+.scene-result.repeat strong {
+    color: #95a5a6;
 }
 
 /* 审问界面 */
@@ -404,6 +429,58 @@ body {
     padding: 15px;
     background: rgba(0,0,0,0.3);
     border-radius: 10px;
+}
+
+.suspect-info {
+    flex: 1;
+}
+
+.suspect-status {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    margin-top: 8px;
+}
+
+.stress-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.stress-label {
+    font-size: 0.9em;
+    color: #bdc3c7;
+}
+
+.stress-bar {
+    width: 100px;
+    height: 8px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.stress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #27ae60, #f39c12, #e74c3c);
+    width: 0%;
+    transition: width 0.5s ease;
+}
+
+.stress-text {
+    font-size: 0.9em;
+    color: #27ae60;
+    font-weight: bold;
+    min-width: 40px;
+}
+
+.emotion-indicator {
+    font-size: 1.1em;
+    padding: 4px 8px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 15px;
+    transition: all 0.3s ease;
 }
 
 .back-btn {

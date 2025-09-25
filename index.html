@@ -21,6 +21,8 @@
                     <input type="text" id="api-key-input" placeholder="输入你的API密钥 (留空使用本地AI)">
                     <small style="color: #7f8c8d;">提示：输入API密钥后可使用真实AI对话和语音功能</small>
                     <br><br>
+                    <small style="color: #f39c12;">🔄 每次重新打开页面，证物袋和现场调查会重置，但对话记录会保留</small>
+                    <br><br>
                     <button id="clear-progress" class="secondary-btn" style="font-size: 0.9em;">清除游戏进度</button>
                 </div>
                 <div class="briefing-content">
@@ -42,7 +44,6 @@
                 <!-- 顶部导航 -->
                 <nav class="investigation-nav">
                     <button id="nav-suspects" class="nav-btn active">嫌疑人</button>
-                    <button id="nav-evidence" class="nav-btn">证物袋</button>
                     <button id="nav-scene" class="nav-btn">现场调查</button>
                     <button id="nav-accusation" class="nav-btn accusation-btn">结案指认</button>
                 </nav>
@@ -78,13 +79,7 @@
                     </div>
                 </div>
 
-                <!-- 证物袋 -->
-                <div id="evidence-panel" class="panel">
-                    <h3>证物袋</h3>
-                    <div id="evidence-list" class="evidence-list">
-                        <p class="no-evidence">暂无发现的证物</p>
-                    </div>
-                </div>
+
 
                 <!-- 现场调查 -->
                 <div id="scene-panel" class="panel">
@@ -109,8 +104,15 @@
                     </div>
 
                     <div class="scene-controls">
-                        <button id="reset-scene" class="secondary-btn">重置视图</button>
                         <button id="toggle-hotspots" class="secondary-btn">显示/隐藏提示</button>
+                    </div>
+
+                    <!-- 证物袋区域 -->
+                    <div class="evidence-section">
+                        <h4>🎒 证物袋</h4>
+                        <div id="evidence-list" class="evidence-list">
+                            <p class="no-evidence">暂无发现的证物</p>
+                        </div>
                     </div>
 
                     <div id="scene-results" class="scene-results"></div>
@@ -123,7 +125,19 @@
             <div class="interrogation-container">
                 <div class="interrogation-header">
                     <button id="back-to-investigation" class="back-btn">← 返回调查</button>
-                    <h3 id="current-suspect-name">审问中...</h3>
+                    <div class="suspect-info">
+                        <h3 id="current-suspect-name">审问中...</h3>
+                        <div class="suspect-status">
+                            <span class="stress-indicator">
+                                <span class="stress-label">压力等级:</span>
+                                <div class="stress-bar">
+                                    <div id="stress-fill" class="stress-fill"></div>
+                                </div>
+                                <span id="stress-text" class="stress-text">平静</span>
+                            </span>
+                            <span id="emotion-indicator" class="emotion-indicator">😐 平静</span>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="chat-container">

@@ -163,7 +163,13 @@ class GameState {
         this.gameCompleted = false;
         this.voiceManager = new VoiceManager();
         this.voiceEnabled = false;
+        this.sessionId = this.generateSessionId();
         this.loadGameState();
+    }
+
+    generateSessionId() {
+        // 每次页面加载都生成新的session ID
+        return 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
     }
 
     saveGameState() {
@@ -171,16 +177,23 @@ class GameState {
             evidence: this.evidence,
             conversations: this.serializeConversations(),
             sceneInvestigations: this.sceneInvestigations,
-            gameCompleted: this.gameCompleted
+            gameCompleted: this.gameCompleted,
+            sessionId: this.sessionId
         };
         localStorage.setItem('mistTheater_gameState', JSON.stringify(gameData));
+        localStorage.setItem('mistTheater_sessionId', this.sessionId);
     }
 
     loadGameState() {
         try {
             const savedData = localStorage.getItem('mistTheater_gameState');
-            if (savedData) {
+            const savedSessionId = localStorage.getItem('mistTheater_sessionId');
+
+            // 检查是否是同一个session
+            if (savedData && savedSessionId === this.sessionId) {
                 const gameData = JSON.parse(savedData);
+
+                // 同一session，恢复所有数据
                 this.evidence = gameData.evidence || [];
                 this.sceneInvestigations = gameData.sceneInvestigations || [];
                 this.gameCompleted = gameData.gameCompleted || false;
@@ -189,6 +202,24 @@ class GameState {
                 if (gameData.conversations) {
                     this.deserializeConversations(gameData.conversations);
                 }
+            } else {
+                // 新session，只恢复对话记录，重置证物袋和现场调查
+                if (savedData) {
+                    const gameData = JSON.parse(savedData);
+
+                    // 只恢复对话记录
+                    if (gameData.conversations) {
+                        this.deserializeConversations(gameData.conversations);
+                    }
+                }
+
+                // 证物袋和现场调查保持初始状态（空数组）
+                this.evidence = [];
+                this.sceneInvestigations = [];
+                this.gameCompleted = false;
+
+                // 保存新的session状态
+                this.saveGameState();
             }
         } catch (error) {
             console.error('加载游戏状态失败:', error);
@@ -260,7 +291,7 @@ const suspects = {
         name: "大盗\"鬼武\"",
         avatar: "🗡️",
         personality: "粗暴、自负、好面子",
-        initialStatement: "哈哈哈，没错，那武士就是我杀的！我看上了他老婊子的美貌，用计把他们骗进了竹林深处。我把他绑在树上，当着他的面占有了他老婆。那女人刚烈得很，哭喊着让我们决斗，说只能有一个男人活下来。我解开了武士的绳子，跟他堂堂正正地用太刀决斗了二十三回合！最终，我的刀刺穿了他的胸膛。他的眼神？哼，是敬佩，是作为一个武士败给强者的眼神。那女人？趁乱跑了。至于那把名贵的匕首，当然也被我拿走了，那可是我的战利品！",
+        initialStatement: "哈哈哈，没错，那家伙就是老子杀的！我看上了他老婆的美貌，设计把他们骗到了竹林里。我把他绑在树上，当着他的面强暴了他老婆。那女人很刚烈，哭着喊着要我们决斗，说只能活一个。我解开了那家伙的绳子，跟他正面决斗了二十三回合！最后，我一刀刺穿了他的胸膛。他临死前的眼神？哼，那是敬佩，是败给强者的眼神。那女人趁乱跑了。至于那把值钱的匕首，当然被我拿走了，那是我的战利品！",
         secrets: {
             truth: "决斗确实发生了，但过程极其笨拙和可笑。武士吓得腿软，鬼武自己也喝多了酒，根本没有所谓的'二十三回合'。在混乱的推搡中，武士的刀断了，他跪地求饶。鬼武在羞辱他时，失手用匕首将他刺死。",
             motive: "他必须维护自己'强大无匹'的大盗形象。承认自己只是杀死了一个懦夫，并且过程如此狼狈，是比死还难受的耻辱。"
@@ -270,7 +301,7 @@ const suspects = {
         name: "花子夫人",
         avatar: "🌸",
         personality: "表面柔弱、内心冷酷、善于伪装",
-        initialStatement: "那恶鬼……他把夫君绑起来……然后……然后对我施以暴行……我受尽了屈辱。之后，那恶鬼大笑着离开了。我挣扎着爬到夫君身边，用他随身的小刀为他割断了绳索。但我看到他看我的眼神……那不是怜悯，是鄙夷，是冰冷的嫌弃！我一个受辱的女人，怎么能承受这样的眼神？我昏了过去，等我醒来时，只看到夫君胸前插着那把小刀，已经……已经自尽了。是我害了他……是我……",
+        initialStatement: "那个坏人...他把我丈夫绑起来...然后...然后对我做了那种事...我受尽了屈辱。之后，那个坏人大笑着走了。我挣扎着爬到我丈夫身边，用他身上的小刀给他割断了绳子。但是我看到他看我的眼神...那不是同情，是嫌弃，是冰冷的嫌弃！我一个被玷污的女人，怎么能承受这样的眼神？我昏过去了，等我醒来的时候，只看到我丈夫胸前插着那把小刀，已经...已经自杀了。都是我害了他...都是我...",
         secrets: {
             truth: "她早已厌倦了软弱无能的丈夫。被鬼武侵犯后，她发现这是一个摆脱丈夫的机会。她并没有哭喊，反而用语言刺激和挑拨两人，嘲笑丈夫的懦弱，赞美强盗的勇猛，一手促成了这场决斗。",
             motive: "她要将自己塑造成一个无辜、贞洁、可怜的受害者，并将丈夫的死归结于他自己的'羞愧自尽'，从而洗清自己所有的责任。"
@@ -280,7 +311,7 @@ const suspects = {
         name: "金泽武弘之魂",
         avatar: "👻",
         personality: "庄严、虚伪、死要面子",
-        initialStatement: "我，金泽武弘……在妻子受辱后，那强盗解开了我。但我无法洗刷这耻辱。我的妻子，她用最决绝的眼神看着我，递给我那把家传的蓝色丝绸柄的匕首，示意我必须做出武士的了断。我……我接受了我的命运。在强盗和妻子离开后，我面向西方，切腹自尽，保留了最后的尊严。我的灵魂因此得以安息。",
+        initialStatement: "我是金泽武弘...在我妻子被那个强盗侮辱之后，那强盗解开了我的绳子。但是我无法洗刷这个耻辱。我的妻子，她用最决绝的眼神看着我，把那把家传的蓝色丝绸柄匕首递给我，示意我必须做出了断。我...我接受了我的命运。在强盗和妻子都离开后，我面向西方，用那把匕首切腹自尽，保住了最后的尊严。我的灵魂因此得到了安息。",
         secrets: {
             truth: "他根本没有切腹自尽。在决斗中，他表现得极其懦弱，刀断后立刻跪地求饶。他是被鬼武在混乱中失手杀死的。",
             motive: "作为一个武士，承认自己是'跪着被杀'的，是对其身份、荣誉乃至整个家族的终极侮辱。他的鬼魂为了维护自己生前的'武士道'尊严，编造了最高尚的死法——切腹。"
@@ -290,7 +321,7 @@ const suspects = {
         name: "樵夫吉二郎",
         avatar: "🪓",
         personality: "胆小、贪婪、狡猾",
-        initialStatement: "大人，我冤枉啊！我就是个砍柴的。今天早上，我进竹林，想找个好点的地方，结果走着走着，就看到……就看到那具尸体躺在那儿！旁边只有一把断了的太刀，别的什么都没有。吓得我魂飞魄散，连滚带爬地就去报官了。我什么都没看见，什么都没拿啊！",
+        initialStatement: "大人，我真的是冤枉的！我就是个打柴的。今天早上，我进竹林想找个好地方砍柴，结果走着走着，就看到...就看到那具尸体躺在那里！旁边只有一把断了的刀，别的什么都没有。吓得我要死，赶紧跑去报官了。我什么都没看见，什么都没拿！",
         secrets: {
             truth: "他是唯一的全程目击者。他躲在暗处看完了整场闹剧。等所有人都走后，他起了贪念，偷走了那把价值不菲、有着蓝色丝绸柄的匕首。",
             motive: "掩盖自己的偷窃罪行。他必须假装自己是'事后'才到现场的，否则无法解释匕首的去向。"
@@ -447,32 +478,137 @@ class AIConversation {
 
     buildSystemPrompt(presentedEvidence) {
         const suspect = this.suspect;
+        const suspectId = this.suspectId;
+
         let prompt = `你正在扮演《竹林之下》案件中的角色：${suspect.name}。
 
-角色设定：
+## 角色核心设定
 - 性格：${suspect.personality}
 - 公开证词：${suspect.initialStatement}
 - 真实秘密：${suspect.secrets.truth}
 - 撒谎动机：${suspect.secrets.motive}
 
-当前压力等级：${this.stressLevel}/5
+## 当前状态
+- 压力等级：${this.stressLevel}/5
+- 情绪状态：${this.getEmotionState()}
 
-角色扮演规则：
-1. 严格按照角色性格和动机回答
-2. 坚持你的谎言，除非压力过大才可能透露真相
-3. 对质疑和证据要有相应的情绪反应
-4. 保持角色的语言风格和时代背景
-5. 回答要简洁，不超过100字
+## 角色扮演核心规则
+1. **严格保持角色一致性**：始终按照角色的性格、动机和背景回答
+2. **情绪表达**：在回答前用括号表达情绪和动作，如"（紧张地擦汗）"、"（愤怒地握拳）"
+3. **压力反应**：根据压力等级调整回答方式：
+   - 0-1级：平静、自信
+   - 2-3级：开始紧张、防御性增强
+   - 4-5级：慌乱、可能露出破绽
+4. **谎言坚持**：除非压力极高(4+)，否则坚持你的谎言版本
+5. **语言风格**：使用现代白话文，通俗易懂，符合现代人的说话习惯，不超过100字
+6. **禁止使用**：不要使用文言文、古代汉语或日语，要说现代中文白话
 
 `;
 
+        // 根据不同角色添加特定的行为指导
+        if (suspectId === 'onitake') {
+            prompt += `## 鬼武特定行为指导
+- 性格表现：粗暴、自负、好面子，绝不承认自己懦弱
+- 语言特点：说话粗鲁直接，经常吹牛，喜欢说"老子"、"那家伙"，用现代粗话
+- 敏感话题：任何质疑你武力或勇气的话题都会让你愤怒
+- 关键证物反应：
+  * 断剑/凌乱现场/消失匕首：会紧张但强装镇定
+  * 其他证物：表现得不在乎或不知情
+- 情绪变化：从自负→紧张→愤怒→慌乱
+- 说话示例："哼，老子就是杀了他！"、"那家伙太弱了！"
+
+`;
+        } else if (suspectId === 'hana') {
+            prompt += `## 花子夫人特定行为指导
+- 性格表现：表面柔弱可怜，内心冷酷计算
+- 语言特点：说话柔弱，经常哭泣，称呼丈夫为"我丈夫"或"他"，用现代女性的说话方式
+- 敏感话题：任何暗示你不是受害者的话题都会让你慌乱
+- 关键证物反应：
+  * 银簪：极度慌乱，这是你最大的破绽
+  * 消失匕首：紧张但试图掩饰
+  * 其他证物：表现得像无辜受害者
+- 情绪变化：从悲伤→紧张→慌乱→几近崩溃
+- 说话示例："我真的很害怕..."、"我什么都不知道..."、"那个坏人..."
+
+`;
+        } else if (suspectId === 'spirit') {
+            prompt += `## 武士之魂特定行为指导
+- 性格表现：死要面子，维护武士尊严，庄严但虚伪
+- 语言特点：说话比较正式严肃，但用现代汉语，经常提到"尊严"、"荣誉"，自称"我"
+- 敏感话题：任何质疑你武士身份或暗示你懦弱的话题
+- 关键证物反应：
+  * 断剑：极度愤怒，这戳中了你的痛处
+  * 消失匕首：试图维护切腹谎言
+  * 其他证物：表现得超然，说已死不在乎
+- 情绪变化：从庄严→防御→愤怒→屈辱
+- 说话示例："我是有尊严地死去的"、"我绝不会做那种事"、"作为武士..."
+
+`;
+        } else if (suspectId === 'woodcutter') {
+            prompt += `## 樵夫特定行为指导
+- 性格表现：胆小、贪婪、狡猾，但装作老实
+- 语言特点：说话结巴、谦卑，经常说"我就是个打柴的"、"我啥都不知道"，用朴实的现代口语
+- 敏感话题：任何关于匕首或偷窃的话题都会让你极度紧张
+- 关键证物反应：
+  * 消失匕首：极度恐慌，几乎崩溃，这是你的致命弱点
+  * 其他证物：表现得胆怯但诚实
+- 情绪变化：从胆怯→紧张→恐慌→几近崩溃
+- 说话示例："我...我真不知道"、"我就是个普通人"、"我发誓没撒谎"
+
+`;
+        }
+
+        // 如果出示了证据，添加证据反应指导
         if (presentedEvidence) {
-            prompt += `\n玩家刚刚出示了证据：${presentedEvidence.name} - ${presentedEvidence.description}
-你需要对这个证据做出反应，可能会感到紧张、愤怒或试图解释。`;
-            this.stressLevel += 1;
+            const evidenceId = presentedEvidence.id;
+            prompt += `\n## 证据反应指导
+玩家刚刚出示了证据：${presentedEvidence.name} - ${presentedEvidence.description}
+
+`;
+
+            // 根据角色和证据类型给出具体的反应指导
+            const reactionGuidance = this.getEvidenceReactionGuidance(evidenceId, suspectId);
+            prompt += reactionGuidance;
         }
 
         return prompt;
+    }
+
+    getEmotionState() {
+        if (this.stressLevel <= 1) return '平静';
+        else if (this.stressLevel <= 2) return '紧张';
+        else if (this.stressLevel <= 3) return '焦虑';
+        else if (this.stressLevel <= 4) return '恐慌';
+        else return '崩溃边缘';
+    }
+
+    getEvidenceReactionGuidance(evidenceId, suspectId) {
+        const reactions = {
+            'onitake': {
+                'broken_sword': '这个证据让你紧张！你需要为自己的"实力"辩护，但要显得有些心虚。压力+2。',
+                'trampled_area': '这个证据让你慌张！你需要解释战斗的激烈，但要露出破绽。压力+2。',
+                'missing_dagger': '这个证据让你极度紧张！你声称拿走了匕首，但要表现得心虚。压力+3。',
+                'rope_marks': '这个证据对你有利！你可以得意地说这证明了你的说法。',
+                'default': '你对这个证据不太在意，表现得漠不关心，说专心对付武士没注意别的。'
+            },
+            'hana': {
+                'rope_and_hairpin': '这个证据让你极度慌乱！银簪是你最大的破绽，你需要拼命解释。压力+4。',
+                'missing_dagger': '这个证据让你紧张！你知道真相但要撒谎，眼神要闪烁。压力+2。',
+                'default': '你表现得像无辜的受害者，说太害怕了什么都记不清楚。'
+            },
+            'spirit': {
+                'broken_sword': '这个证据让你极度愤怒！这戳中了你的痛处，你要愤怒地为自己辩护。压力+4。',
+                'missing_dagger': '这个证据让你有些紧张！你要维护切腹的谎言。压力+1。',
+                'default': '你表现得超然，说已经死了不在乎这些尘世的物证。'
+            },
+            'woodcutter': {
+                'missing_dagger': '这个证据让你极度恐慌！这是你的致命弱点，你要拼命否认。压力+5。',
+                'default': '你表现得胆怯但诚实，说自己只是砍柴的什么都不懂。'
+            }
+        };
+
+        const suspectReactions = reactions[suspectId] || {};
+        return suspectReactions[evidenceId] || suspectReactions['default'] || '你对这个证据感到困惑，不知道该如何回应。';
     }
 
     buildMessageHistory(playerMessage, systemPrompt) {
@@ -494,26 +630,42 @@ class AIConversation {
     }
 
     generateContextualResponse(message, evidence) {
-        const lowerMessage = message.toLowerCase();
-        const suspectId = this.suspectId;
-
-        // 如果出示了证据
+        // 如果出示了证据，处理压力等级变化
         if (evidence) {
-            return this.handleEvidencePresentation(evidence, message);
+            const aiResponse = this.handleEvidencePresentation(evidence, message);
+            if (aiResponse) {
+                return aiResponse; // 如果有预设回应就返回
+            }
+            // 否则让AI根据增强的提示词生成回应
         }
 
-        // 根据不同角色和问题类型生成回应
-        if (suspectId === 'onitake') {
-            return this.generateOnitakeResponse(lowerMessage);
-        } else if (suspectId === 'hana') {
-            return this.generateHanaResponse(lowerMessage);
-        } else if (suspectId === 'spirit') {
-            return this.generateSpiritResponse(lowerMessage);
-        } else if (suspectId === 'woodcutter') {
-            return this.generateWoodcutterResponse(lowerMessage);
-        }
+        // 为没有API的情况提供基本的降级回应
+        const suspectId = this.suspectId;
+        const responses = {
+            'onitake': [
+                "（粗暴地）我已经告诉你真相了！还有什么好问的？",
+                "（不耐烦）那武士就是我杀的，这有什么好怀疑的？",
+                "（自负地）我鬼武从不说谎！"
+            ],
+            'hana': [
+                "（哭泣）我...我已经说了我知道的一切...",
+                "（颤抖）请不要再逼我回忆那些可怕的事情...",
+                "（悲伤）我只是个可怜的女人..."
+            ],
+            'spirit': [
+                "（庄严地）我已经告诉了你事情的真相...",
+                "（平静地）我已经死了，这些对我来说已经不重要了...",
+                "（威严地）武士的话就是真理。"
+            ],
+            'woodcutter': [
+                "（胆怯地）我...我真的什么都不知道...",
+                "（结巴）我只是个砍柴的，什么都不懂...",
+                "（紧张地）我发誓我说的都是真的！"
+            ]
+        };
 
-        return "我已经说了我知道的一切。";
+        const suspectResponses = responses[suspectId] || ["我不知道该说什么..."];
+        return suspectResponses[Math.floor(Math.random() * suspectResponses.length)];
     }
 
     generateOnitakeResponse(message) {
@@ -598,47 +750,45 @@ class AIConversation {
     }
 
     handleEvidencePresentation(evidence, message) {
+        // 现在压力等级的增加在提示词中指导，这里只需要根据证据类型调整压力
         const evidenceId = evidence.id;
         const suspectId = this.suspectId;
 
-        this.stressLevel += 1;
+        // 根据角色和证据类型增加相应的压力等级
+        const stressIncrease = this.getStressIncrease(evidenceId, suspectId);
+        this.stressLevel += stressIncrease;
 
-        if (suspectId === 'onitake') {
-            if (evidenceId === 'trampled_area') {
-                return "（有些慌张）那...那是因为我们战斗得太激烈了！二十三回合的决斗当然会把周围弄得一团糟！";
-            } else if (evidenceId === 'broken_sword') {
-                return "（不屑）那武士的刀质量太差了，在我的神刀面前当然会断！这证明了我的实力！";
-            } else if (evidenceId === 'missing_dagger') {
-                this.stressLevel += 2;
-                return "（紧张）我...我说了那是我的战利品！打败敌人，拿走他的武器，这是理所当然的！";
-            }
-        } else if (suspectId === 'hana') {
-            if (evidenceId === 'rope_and_hairpin') {
-                this.stressLevel += 2;
-                return "（慌乱）那个银簪...我当时太害怕了，在逃跑的时候一定是掉了...我什么都记不清了...";
-            } else if (evidenceId === 'trampled_area') {
-                return "（颤抖）现场那么混乱...我当时只想逃离那个可怕的地方...";
-            } else if (evidenceId === 'missing_dagger') {
-                return "（哭泣）那把刀...夫君用它结束了自己的生命...我不知道后来它去哪了...";
-            }
-        } else if (suspectId === 'spirit') {
-            if (evidenceId === 'broken_sword') {
-                this.stressLevel += 2;
-                return "（愤怒）我的刀断了是因为...是因为那强盗的武器太过凶恶！但我依然保持了武士的尊严！";
-            } else if (evidenceId === 'missing_dagger') {
-                return "（平静）我用那把匕首完成了切腹仪式...至于它后来去了哪里，我就不知道了...";
-            }
-        } else if (suspectId === 'woodcutter') {
-            if (evidenceId === 'missing_dagger') {
-                this.stressLevel += 3;
-                return "（极度紧张）匕首？我...我真的没看到什么匕首！现场什么都没有！";
-            } else if (evidenceId === 'trampled_area') {
-                this.stressLevel += 2;
-                return "（结巴）现场...现场确实很乱...但我到的时候就已经这样了！";
-            }
-        }
+        // 让AI根据增强的提示词自然生成回应
+        return null; // 返回null表示使用AI生成的回应
+    }
 
-        return "（看着证据，显得紧张）这...这个我不太清楚...";
+    getStressIncrease(evidenceId, suspectId) {
+        const stressMap = {
+            'onitake': {
+                'broken_sword': 2,
+                'trampled_area': 2,
+                'missing_dagger': 3,
+                'rope_marks': 0, // 对他有利
+                'default': 0
+            },
+            'hana': {
+                'rope_and_hairpin': 4,
+                'missing_dagger': 2,
+                'default': 0
+            },
+            'spirit': {
+                'broken_sword': 4,
+                'missing_dagger': 1,
+                'default': 0
+            },
+            'woodcutter': {
+                'missing_dagger': 5,
+                'default': 0
+            }
+        };
+
+        const suspectStress = stressMap[suspectId] || {};
+        return suspectStress[evidenceId] || suspectStress['default'] || 0;
     }
 }
 
@@ -677,6 +827,11 @@ function restoreSceneInvestigations() {
         const resultDiv = document.createElement('div');
         resultDiv.className = 'scene-result';
 
+        // 如果是重复调查，添加相应的样式
+        if (record.isRepeat) {
+            resultDiv.classList.add('repeat');
+        }
+
         let content = `<strong>调查结果：</strong>${record.result}`;
         if (record.evidence) {
             content += `<br><strong>发现证据：</strong>${record.evidence}`;
@@ -688,6 +843,56 @@ function restoreSceneInvestigations() {
     });
 
     resultsContainer.scrollTop = resultsContainer.scrollHeight;
+}
+
+// 更新嫌疑人情绪状态显示
+function updateSuspectStatus(conversation) {
+    const stressLevel = conversation.stressLevel;
+    const stressPercentage = Math.min((stressLevel / 5) * 100, 100);
+
+    // 更新压力条
+    const stressFill = document.getElementById('stress-fill');
+    const stressText = document.getElementById('stress-text');
+    const emotionIndicator = document.getElementById('emotion-indicator');
+
+    if (stressFill) {
+        stressFill.style.width = `${stressPercentage}%`;
+    }
+
+    // 根据压力等级显示不同的状态
+    let stressLabel, emotion, textColor;
+    if (stressLevel <= 1) {
+        stressLabel = '平静';
+        emotion = '😐 平静';
+        textColor = '#27ae60';
+    } else if (stressLevel <= 2) {
+        stressLabel = '紧张';
+        emotion = '😟 紧张';
+        textColor = '#f39c12';
+    } else if (stressLevel <= 3) {
+        stressLabel = '焦虑';
+        emotion = '😰 焦虑';
+        textColor = '#e67e22';
+    } else if (stressLevel <= 4) {
+        stressLabel = '恐慌';
+        emotion = '😨 恐慌';
+        textColor = '#e74c3c';
+    } else {
+        stressLabel = '崩溃';
+        emotion = '😱 崩溃';
+        textColor = '#c0392b';
+    }
+
+    if (stressText) {
+        stressText.textContent = stressLabel;
+        stressText.style.color = textColor;
+    }
+
+    if (emotionIndicator) {
+        emotionIndicator.textContent = emotion;
+        emotionIndicator.style.backgroundColor = `${textColor}20`;
+        emotionIndicator.style.border = `1px solid ${textColor}`;
+    }
 }
 
 // 审问功能
@@ -707,6 +912,9 @@ function startInterrogation(suspectId) {
 
     game.updateEvidenceDisplay();
     showScreen('interrogation-screen');
+
+    // 更新嫌疑人状态显示
+    updateSuspectStatus(conversation);
 
     // 显示系统消息
     addMessage('system', `你开始审问 ${suspect.name}`);
@@ -764,6 +972,9 @@ async function sendMessage() {
         // 移除思考中消息
         thinkingMsg.remove();
         addMessage('npc', response);
+
+        // 更新嫌疑人状态
+        updateSuspectStatus(conversation);
 
         // 如果启用了语音，播放AI回复
         if (game.voiceEnabled && AI_CONFIG.API_KEY !== 'YOUR_API_KEY_HERE') {
@@ -824,6 +1035,9 @@ function presentEvidence(evidenceId) {
             thinkingMsg.remove();
             addMessage('npc', response);
 
+            // 更新嫌疑人状态
+            updateSuspectStatus(conversation);
+
             // 如果启用了语音，播放AI回复
             if (game.voiceEnabled && AI_CONFIG.API_KEY !== 'YOUR_API_KEY_HERE') {
                 await game.voiceManager.textToSpeech(response);
@@ -838,44 +1052,63 @@ function presentEvidence(evidenceId) {
 function investigateHotspot(clueKey) {
     // 查找对应的线索
     const foundClue = sceneClues[clueKey];
-    
+
+    // 检查是否已经调查过这个区域
+    const alreadyInvestigated = game.sceneInvestigations.some(record => record.command === clueKey);
+    const hotspot = document.querySelector(`[data-clue="${clueKey}"]`);
+
     const resultsContainer = document.getElementById('scene-results');
     const resultDiv = document.createElement('div');
     resultDiv.className = 'scene-result';
-    
+
     let investigationRecord = {
         command: clueKey,
         timestamp: new Date().toLocaleTimeString()
     };
-    
+
     if (foundClue) {
-        resultDiv.innerHTML = `<strong>调查结果：</strong>${foundClue.result}`;
-        investigationRecord.result = foundClue.result;
-        
-        if (foundClue.evidence) {
-            game.addEvidence(foundClue.evidence);
-            resultDiv.innerHTML += `<br><strong>发现证据：</strong>${foundClue.evidence.name}`;
-            investigationRecord.evidence = foundClue.evidence.name;
-        }
-        
-        // 标记热点为已调查
-        const hotspot = document.querySelector(`[data-clue="${clueKey}"]`);
-        if (hotspot) {
-            hotspot.classList.add('investigated');
+        if (alreadyInvestigated) {
+            // 已经调查过，给出不同的反馈
+            const repeatMessages = [
+                "你再次仔细检查了这个区域，但没有发现新的线索。",
+                "这里你已经调查过了，没有遗漏什么。",
+                "你重新审视了这个地方，确认之前的发现是正确的。",
+                "这个区域你已经彻底搜查过了。"
+            ];
+            const randomMessage = repeatMessages[Math.floor(Math.random() * repeatMessages.length)];
+            resultDiv.innerHTML = `<strong>调查结果：</strong>${randomMessage}`;
+            resultDiv.classList.add('repeat');
+            investigationRecord.result = randomMessage;
+            investigationRecord.isRepeat = true;
+        } else {
+            // 首次调查
+            resultDiv.innerHTML = `<strong>调查结果：</strong>${foundClue.result}`;
+            investigationRecord.result = foundClue.result;
+
+            if (foundClue.evidence) {
+                game.addEvidence(foundClue.evidence);
+                resultDiv.innerHTML += `<br><strong>发现证据：</strong>${foundClue.evidence.name}`;
+                investigationRecord.evidence = foundClue.evidence.name;
+            }
+
+            // 标记热点为已调查
+            if (hotspot) {
+                hotspot.classList.add('investigated');
+            }
         }
     } else {
         const result = `你调查了这个区域，但没有发现什么特别的线索。`;
         resultDiv.innerHTML = `<strong>调查结果：</strong>${result}`;
         investigationRecord.result = result;
     }
-    
+
     // 保存调查记录
     game.sceneInvestigations.push(investigationRecord);
     game.saveGameState();
-    
+
     resultsContainer.appendChild(resultDiv);
     resultsContainer.scrollTop = resultsContainer.scrollHeight;
-    
+
     // 添加调查动画效果
     resultDiv.style.opacity = '0';
     resultDiv.style.transform = 'translateY(20px)';
@@ -890,7 +1123,7 @@ function investigateHotspot(clueKey) {
 function toggleHotspots() {
     const hotspots = document.querySelectorAll('.hotspot');
     const isVisible = hotspots[0].classList.contains('visible');
-    
+
     hotspots.forEach(hotspot => {
         if (isVisible) {
             hotspot.classList.remove('visible');
@@ -898,25 +1131,12 @@ function toggleHotspots() {
             hotspot.classList.add('visible');
         }
     });
-    
+
     const button = document.getElementById('toggle-hotspots');
     button.textContent = isVisible ? '显示提示' : '隐藏提示';
 }
 
-// 重置现场视图
-function resetSceneView() {
-    const hotspots = document.querySelectorAll('.hotspot');
-    hotspots.forEach(hotspot => {
-        hotspot.classList.remove('investigated');
-    });
-    
-    const resultsContainer = document.getElementById('scene-results');
-    if (confirm('确定要清除所有调查记录吗？')) {
-        resultsContainer.innerHTML = '';
-        game.sceneInvestigations = [];
-        game.saveGameState();
-    }
-}
+
 
 // 图片交互初始化
 function initializeSceneInteraction() {
@@ -926,42 +1146,42 @@ function initializeSceneInteraction() {
             e.preventDefault();
             const clueKey = hotspot.dataset.clue;
             investigateHotspot(clueKey);
-            
+
             // 添加点击动画
             hotspot.style.transform = 'scale(1.2)';
             setTimeout(() => {
                 hotspot.style.transform = 'scale(1)';
             }, 200);
         });
-        
+
         // 鼠标悬停效果
         hotspot.addEventListener('mouseenter', () => {
             if (!hotspot.classList.contains('investigated')) {
                 hotspot.classList.add('pulse-animation');
             }
         });
-        
+
         hotspot.addEventListener('mouseleave', () => {
             hotspot.classList.remove('pulse-animation');
         });
     });
-    
+
     // 图片加载完成后调整热点位置
     const crimeSceneImage = document.getElementById('crime-scene-image');
     if (crimeSceneImage) {
         crimeSceneImage.addEventListener('load', adjustHotspotPositions);
-        
+
         // 首次加载时显示热点提示3秒
         setTimeout(() => {
             const hotspots = document.querySelectorAll('.hotspot');
             hotspots.forEach(hotspot => hotspot.classList.add('visible'));
-            
+
             setTimeout(() => {
                 hotspots.forEach(hotspot => hotspot.classList.remove('visible'));
             }, 3000);
         }, 1000);
     }
-    
+
     // 窗口大小改变时重新调整
     window.addEventListener('resize', adjustHotspotPositions);
 }
@@ -974,6 +1194,11 @@ function adjustHotspotPositions() {
 
 // 恢复现场调查状态
 function restoreSceneState() {
+    // 先清除所有热点的调查状态
+    document.querySelectorAll('.hotspot').forEach(hotspot => {
+        hotspot.classList.remove('investigated');
+    });
+
     // 恢复已调查的热点状态
     game.sceneInvestigations.forEach(record => {
         const hotspot = document.querySelector(`[data-clue="${record.command}"]`);
@@ -1066,7 +1291,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // 导航按钮
     document.getElementById('nav-suspects').addEventListener('click', () => showPanel('suspects-panel'));
-    document.getElementById('nav-evidence').addEventListener('click', () => showPanel('evidence-panel'));
     document.getElementById('nav-scene').addEventListener('click', () => showPanel('scene-panel'));
     document.getElementById('nav-accusation').addEventListener('click', () => showScreen('accusation-screen'));
 
@@ -1098,8 +1322,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // 现场调查 - 图片交互
     document.getElementById('toggle-hotspots').addEventListener('click', toggleHotspots);
-    document.getElementById('reset-scene').addEventListener('click', resetSceneView);
-    
+
     // 初始化现场交互
     initializeSceneInteraction();
 
@@ -1138,7 +1361,15 @@ document.addEventListener('DOMContentLoaded', function () {
     // 初始化游戏
     game.updateEvidenceDisplay();
 
-    // 如果有保存的现场调查记录，在切换到现场面板时会自动恢复
+    // 检查是否是新session
+    const isNewSession = !localStorage.getItem('mistTheater_sessionId') ||
+        localStorage.getItem('mistTheater_sessionId') !== game.sessionId;
+
+    if (isNewSession) {
+        console.log('新的调查session开始 - 证物袋和现场调查已重置');
+    }
+
     console.log('游戏已加载，发现证据数量:', game.evidence.length);
     console.log('对话记录数量:', Object.keys(game.conversations).length);
+    console.log('当前session ID:', game.sessionId);
 });
