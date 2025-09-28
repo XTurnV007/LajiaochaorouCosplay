@@ -10,20 +10,79 @@
 
 <body>
     <div id="app">
+        <!-- 封面页 -->
+        <div id="cover-screen" class="screen active">
+            <div class="cover-container">
+                <div class="cover-overlay"></div>
+                <div class="cover-content">
+                    <div class="game-logo">
+                        <h1 class="main-title">迷雾剧场</h1>
+                        <h2 class="sub-title">竹林之下</h2>
+                        <div class="title-decoration"></div>
+                    </div>
+                    
+                    <div class="cover-description">
+                        <p class="atmosphere-text">平安时代，青竹林中</p>
+                        <p class="atmosphere-text">一桩离奇命案，四个截然不同的证词</p>
+                        <p class="atmosphere-text">真相只有一个，但每个人都在撒谎...</p>
+                    </div>
+                    
+                    <div class="cover-actions">
+                        <button id="enter-game" class="cover-btn primary">进入游戏</button>
+                        <button id="show-settings" class="cover-btn secondary">设置</button>
+                        <div class="keyboard-hint">
+                            <small>提示：按 Enter 或 空格键 快速开始</small>
+                        </div>
+                    </div>
+                    
+                    <!-- 设置面板 -->
+                    <div id="settings-panel" class="settings-panel hidden">
+                        <div class="settings-content">
+                            <h3>游戏设置</h3>
+                            <div class="setting-item">
+                                <label>AI配置 (可选)</label>
+                                <input type="text" id="api-key-input" placeholder="输入你的API密钥 (留空使用本地AI)">
+                                <small>提示：输入API密钥后可使用真实AI对话和语音功能</small>
+                            </div>
+                            <div class="setting-actions">
+                                <button id="save-settings" class="cover-btn primary">保存设置</button>
+                                <button id="clear-progress" class="cover-btn danger">清除游戏进度</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- AI剧本杀介绍框 - 右下角 -->
+                <div class="game-intro-corner">
+                    <h3 class="intro-title">🤖 AI互动剧本杀</h3>
+                    <p class="intro-text">与AI角色进行真实对话，每个角色都有独特性格和秘密</p>
+                    <p class="intro-text">通过现场调查收集证物，在审问中寻找矛盾，运用推理破解谜团</p>
+                    <div class="features-list">
+                        <span class="feature-tag">🗣️ 语音交互</span>
+                        <span class="feature-tag">📱 聊天界面</span>
+                        <span class="feature-tag">🔍 互动调查</span>
+                        <span class="feature-tag">📊 情绪系统</span>
+                    </div>
+                </div>
+                
+                <!-- 氛围元素 -->
+                <div class="atmosphere-elements">
+                    <div class="floating-leaf leaf-1">🍃</div>
+                    <div class="floating-leaf leaf-2">🍃</div>
+                    <div class="floating-leaf leaf-3">🍃</div>
+                    <div class="mist-effect"></div>
+                </div>
+            </div>
+        </div>
+
         <!-- 案件陈述阶段 -->
-        <div id="briefing-screen" class="screen active">
+        <div id="briefing-screen" class="screen">
             <div class="briefing-container">
                 <h1>迷雾剧场</h1>
                 <h2>竹林之下</h2>
 
-                <div class="api-config">
-                    <h4>AI配置 (可选)</h4>
-                    <input type="text" id="api-key-input" placeholder="输入你的API密钥 (留空使用本地AI)">
-                    <small style="color: #7f8c8d;">提示：输入API密钥后可使用真实AI对话和语音功能</small>
-                    <br><br>
+                <div class="game-info">
                     <small style="color: #f39c12;">🔄 每次重新打开页面，证物袋和现场调查会重置，但对话记录会保留</small>
-                    <br><br>
-                    <button id="clear-progress" class="secondary-btn" style="font-size: 0.9em;">清除游戏进度</button>
                 </div>
                 <div class="briefing-content">
                     <p>大人，日安。</p>
@@ -43,99 +102,243 @@
             <div class="investigation-container">
                 <!-- 顶部导航 -->
                 <nav class="investigation-nav">
-                    <button id="nav-suspects" class="nav-btn active">嫌疑人</button>
-                    <button id="nav-scene" class="nav-btn">现场调查</button>
+                    <button id="nav-scene" class="nav-btn active">现场调查</button>
+                    <button id="nav-suspects" class="nav-btn">嫌疑人</button>
                     <button id="nav-accusation" class="nav-btn accusation-btn">结案指认</button>
                 </nav>
 
-                <!-- 嫌疑人列表 -->
-                <div id="suspects-panel" class="panel active">
-                    <h3>嫌疑人档案</h3>
-                    <div class="suspects-grid">
-                        <div class="suspect-card" data-suspect="onitake">
-                            <div class="suspect-avatar">🗡️</div>
-                            <h4>大盗"鬼武"</h4>
-                            <p>残暴贪婪的山中大盗</p>
-                            <button class="interrogate-btn">审问</button>
+                <!-- 现场调查 -->
+                <div id="scene-panel" class="panel active">
+                    <div class="scene-header">
+                        <h3>竹林现场调查</h3>
+                        <p class="scene-description-inline">你站在青竹林中的案发现场。点击图片中的不同区域进行调查。</p>
+                        <button id="toggle-hotspots" class="eye-btn" title="显示/隐藏提示">
+                            <span class="eye-icon eye-open">👁️</span>
+                            <span class="eye-icon eye-closed" style="display: none;">😞</span>
+                        </button>
+                    </div>
+
+                    <div class="scene-layout">
+                        <!-- 左侧：图片 -->
+                        <div class="scene-left">
+                            <div class="scene-image-container">
+                                <img src="images/crime_scene.png" alt="案发现场" id="crime-scene-image">
+
+                                <!-- 可点击的热点区域 -->
+                                <div class="hotspot" id="hotspot-body" data-clue="检查尸体" title="检查尸体"></div>
+                                <div class="hotspot" id="hotspot-sword" data-clue="检查武器" title="检查断剑"></div>
+                                <div class="hotspot" id="hotspot-trees" data-clue="调查树木" title="调查竹林"></div>
+                                <div class="hotspot" id="hotspot-ground" data-clue="搜索地面" title="搜索地面"></div>
+                                <div class="hotspot" id="hotspot-flowers" data-clue="调查周围" title="调查茶花丛"></div>
+                                <div class="hotspot" id="hotspot-rope" data-clue="寻找匕首" title="寻找线索"></div>
+                            </div>
+
                         </div>
-                        <div class="suspect-card" data-suspect="hana">
-                            <div class="suspect-avatar">🌸</div>
-                            <h4>花子夫人</h4>
-                            <p>武士金泽武弘的妻子</p>
-                            <button class="interrogate-btn">审问</button>
-                        </div>
-                        <div class="suspect-card" data-suspect="spirit">
-                            <div class="suspect-avatar">👻</div>
-                            <h4>金泽武弘之魂</h4>
-                            <p>通过女巫市子召唤</p>
-                            <button class="interrogate-btn">审问</button>
-                        </div>
-                        <div class="suspect-card" data-suspect="woodcutter">
-                            <div class="suspect-avatar">🪓</div>
-                            <h4>樵夫吉二郎</h4>
-                            <p>发现尸体的报案人</p>
-                            <button class="interrogate-btn">审问</button>
+
+                        <!-- 右侧：调查信息组件 -->
+                        <div class="scene-right">
+                            <!-- 证物袋区域 -->
+                            <div class="evidence-section">
+                                <h4>🎒 证物袋</h4>
+                                <div id="evidence-list" class="evidence-list">
+                                    <p class="no-evidence">暂无发现的证物</p>
+                                </div>
+                            </div>
+
+                            <!-- 调查结果聊天框 -->
+                            <div class="scene-chat-container">
+                                <div class="scene-chat-header">
+                                    <h4>🔍 调查结果</h4>
+                                </div>
+                                <div id="scene-results" class="scene-chat-messages">
+                                    <div class="scene-chat-message system">
+                                        <div class="message-content">
+                                            <p>点击案发现场的不同区域进行调查，调查结果将在这里显示。</p>
+                                        </div>
+                                        <div class="message-time">系统提示</div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-
-
-                <!-- 现场调查 -->
-                <div id="scene-panel" class="panel">
-                    <h3>竹林现场调查</h3>
-                    <div class="scene-description">
-                        <p>你站在青竹林中的案发现场。点击图片中的不同区域进行调查。</p>
-                        <div class="scene-tips">
-                            <small>💡 提示：点击"显示提示"按钮可以看到可调查的区域</small>
+                <!-- 嫌疑人列表 -->
+                <div id="suspects-panel" class="panel">
+                    <div class="panel-header">
+                        <h3>嫌疑人档案</h3>
+                        <small class="panel-subtitle">与AI角色对话，每个角色都有独特性格与秘密</small>
+                    </div>
+                    <div class="suspects-chat-container">
+                        <!-- 左侧角色列表 -->
+                        <div class="suspects-sidebar">
+                            <div class="suspects-list">
+                                <div class="suspect-chat-card" data-suspect="onitake">
+                                    <div class="suspect-image-container">
+                                        <img src="images/characters/onitake.png" alt="大盗鬼武" class="suspect-image">
+                                        <div class="suspect-avatar">🗡️</div>
+                                    </div>
+                                    <div class="suspect-info">
+                                        <h4>大盗"鬼武"</h4>
+                                        <p class="suspect-status-text">残暴贪婪的山中大盗</p>
+                                        <div class="chat-preview">点击开始审问</div>
+                                    </div>
+                                    <div class="unread-indicator" style="display: none;"></div>
+                                </div>
+                                <div class="suspect-chat-card" data-suspect="hana">
+                                    <div class="suspect-image-container">
+                                        <img src="images/characters/hana.png" alt="花子夫人" class="suspect-image">
+                                        <div class="suspect-avatar">🌸</div>
+                                    </div>
+                                    <div class="suspect-info">
+                                        <h4>花子夫人</h4>
+                                        <p class="suspect-status-text">武士金泽武弘的妻子</p>
+                                        <div class="chat-preview">点击开始审问</div>
+                                    </div>
+                                    <div class="unread-indicator" style="display: none;"></div>
+                                </div>
+                                <div class="suspect-chat-card" data-suspect="spirit">
+                                    <div class="suspect-image-container">
+                                        <img src="images/characters/spirit.png" alt="金泽武弘之魂" class="suspect-image">
+                                        <div class="suspect-avatar">👻</div>
+                                    </div>
+                                    <div class="suspect-info">
+                                        <h4>金泽武弘之魂</h4>
+                                        <p class="suspect-status-text">通过女巫市子召唤</p>
+                                        <div class="chat-preview">点击开始审问</div>
+                                    </div>
+                                    <div class="unread-indicator" style="display: none;"></div>
+                                </div>
+                                <div class="suspect-chat-card" data-suspect="woodcutter">
+                                    <div class="suspect-image-container">
+                                        <img src="images/characters/woodcutter.png" alt="樵夫吉二郎" class="suspect-image">
+                                        <div class="suspect-avatar">🪓</div>
+                                    </div>
+                                    <div class="suspect-info">
+                                        <h4>樵夫吉二郎</h4>
+                                        <p class="suspect-status-text">发现尸体的报案人</p>
+                                        <div class="chat-preview">点击开始审问</div>
+                                    </div>
+                                    <div class="unread-indicator" style="display: none;"></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 右侧聊天区域 -->
+                        <div class="chat-area">
+                            <!-- 聊天头部 -->
+                            <div class="chat-header">
+                                <div class="current-suspect-info">
+                                    <img id="current-chat-avatar" src="" alt="" class="current-chat-avatar">
+                                    <div class="current-suspect-details">
+                                        <h4 id="current-chat-name">选择一个嫌疑人开始审问</h4>
+                                        <div class="suspect-stress-status">
+                                            <span class="stress-indicator">
+                                                <span class="stress-label">压力等级:</span>
+                                                <div class="stress-bar">
+                                                    <div id="chat-stress-fill" class="stress-fill"></div>
+                                                </div>
+                                                <span id="chat-stress-text" class="stress-text">平静</span>
+                                            </span>
+                                            <span id="chat-emotion-indicator" class="emotion-indicator">😐 平静</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- 聊天消息区域 -->
+                            <div class="chat-messages-area">
+                                <div id="chat-messages" class="chat-messages">
+                                    <div class="welcome-message">
+                                        <p>👋 欢迎来到审问室</p>
+                                        <p>请从左侧选择一个嫌疑人开始审问</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- 证据工具栏 -->
+                            <div class="evidence-toolbar">
+                                <div id="available-evidence" class="available-evidence">
+                                    <span>可出示证据：</span>
+                                </div>
+                            </div>
+                            
+                            <!-- 聊天输入区域 -->
+                            <div class="chat-input-area">
+                                <div class="chat-input-container">
+                                    <input type="text" id="chat-input" placeholder="输入你的问题..." disabled>
+                                    <button id="send-message" disabled>发送</button>
+                                </div>
+                                
+                                <div class="voice-controls">
+                                    <label class="voice-toggle">
+                                        <input type="checkbox" id="chat-voice-enabled" onclick="game.voiceEnabled = this.checked; console.log('语音状态:', game.voiceEnabled);">
+                                        <span>启用语音回复</span>
+                                    </label>
+                                    <button id="stop-audio" class="voice-btn" title="停止播放">🔇</button>
+                                    <small style="color: #7f8c8d; margin-left: 10px;">💡 勾选后AI角色会用语音回复</small>
+                                </div>
+                            </div>
                         </div>
                     </div>
+                </div>
+                <!-- 结案指认 -->
+                <div id="accusation-panel" class="panel">
+                    <div class="accusation-container">
+                        <h2>结案指认</h2>
+                        <div class="accusation-form">
+                            <div class="form-group">
+                                <label>谁是凶手？</label>
+                                <select id="killer-select">
+                                    <option value="">请选择...</option>
+                                    <option value="onitake">大盗"鬼武"</option>
+                                    <option value="hana">花子夫人</option>
+                                    <option value="spirit">金泽武弘（自杀）</option>
+                                    <option value="woodcutter">樵夫吉二郎</option>
+                                </select>
+                            </div>
 
-                    <div class="scene-image-container">
-                        <img src="images/crime_scene.png" alt="案发现场" id="crime-scene-image">
+                            <div class="form-group">
+                                <label>作案手法：</label>
+                                <textarea id="method-text" placeholder="请描述凶手是如何作案的..."></textarea>
+                            </div>
 
-                        <!-- 可点击的热点区域 -->
-                        <div class="hotspot" id="hotspot-body" data-clue="检查尸体" title="检查尸体"></div>
-                        <div class="hotspot" id="hotspot-sword" data-clue="检查武器" title="检查断剑"></div>
-                        <div class="hotspot" id="hotspot-trees" data-clue="调查树木" title="调查竹林"></div>
-                        <div class="hotspot" id="hotspot-ground" data-clue="搜索地面" title="搜索地面"></div>
-                        <div class="hotspot" id="hotspot-flowers" data-clue="调查周围" title="调查茶花丛"></div>
-                        <div class="hotspot" id="hotspot-rope" data-clue="寻找匕首" title="寻找线索"></div>
-                    </div>
+                            <div class="form-group">
+                                <label>作案动机：</label>
+                                <textarea id="motive-text" placeholder="请分析凶手的作案动机..."></textarea>
+                            </div>
 
-                    <div class="scene-controls">
-                        <button id="toggle-hotspots" class="secondary-btn">显示/隐藏提示</button>
-                    </div>
-
-                    <!-- 证物袋区域 -->
-                    <div class="evidence-section">
-                        <h4>🎒 证物袋</h4>
-                        <div id="evidence-list" class="evidence-list">
-                            <p class="no-evidence">暂无发现的证物</p>
+                            <div class="form-actions">
+                                <button id="back-to-investigation-2" class="secondary-btn">继续调查</button>
+                                <button id="submit-accusation" class="primary-btn">提交指认</button>
+                            </div>
                         </div>
                     </div>
-
-                    <div id="scene-results" class="scene-results"></div>
                 </div>
             </div>
         </div>
 
-        <!-- 审问界面 -->
+        <!-- 审问界面 (保留用于向后兼容) -->
         <div id="interrogation-screen" class="screen">
             <div class="interrogation-container">
                 <div class="interrogation-header">
                     <button id="back-to-investigation" class="back-btn">← 返回调查</button>
                     <div class="suspect-info">
-                        <h3 id="current-suspect-name">审问中...</h3>
-                        <div class="suspect-status">
-                            <span class="stress-indicator">
-                                <span class="stress-label">压力等级:</span>
-                                <div class="stress-bar">
-                                    <div id="stress-fill" class="stress-fill"></div>
+                        <div class="suspect-profile">
+                            <img id="current-suspect-image" src="" alt="" class="current-suspect-image">
+                            <div class="suspect-details">
+                                <h3 id="current-suspect-name">审问中...</h3>
+                                <div class="suspect-status">
+                                    <span class="stress-indicator">
+                                        <span class="stress-label">压力等级:</span>
+                                        <div class="stress-bar">
+                                            <div id="stress-fill" class="stress-fill"></div>
+                                        </div>
+                                        <span id="stress-text" class="stress-text">平静</span>
+                                    </span>
+                                    <span id="emotion-indicator" class="emotion-indicator">😐 平静</span>
                                 </div>
-                                <span id="stress-text" class="stress-text">平静</span>
-                            </span>
-                            <span id="emotion-indicator" class="emotion-indicator">😐 平静</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -156,7 +359,7 @@
 
                     <div class="voice-controls">
                         <label class="voice-toggle">
-                            <input type="checkbox" id="voice-enabled">
+                            <input type="checkbox" id="interrogation-voice-enabled" onclick="game.voiceEnabled = this.checked; console.log('语音状态:', game.voiceEnabled);">
                             <span>启用语音回复</span>
                         </label>
                         <button id="stop-audio" class="voice-btn" title="停止播放">🔇</button>
@@ -165,47 +368,31 @@
                 </div>
             </div>
         </div>
+    </div>
 
-        <!-- 结案指认界面 -->
-        <div id="accusation-screen" class="screen">
-            <div class="accusation-container">
-                <h2>结案指认</h2>
-                <div class="accusation-form">
-                    <div class="form-group">
-                        <label>谁是凶手？</label>
-                        <select id="killer-select">
-                            <option value="">请选择...</option>
-                            <option value="onitake">大盗"鬼武"</option>
-                            <option value="hana">花子夫人</option>
-                            <option value="spirit">金泽武弘（自杀）</option>
-                            <option value="woodcutter">樵夫吉二郎</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label>作案手法：</label>
-                        <textarea id="method-text" placeholder="请描述凶手是如何作案的..."></textarea>
-                    </div>
-
-                    <div class="form-group">
-                        <label>作案动机：</label>
-                        <textarea id="motive-text" placeholder="请分析凶手的作案动机..."></textarea>
-                    </div>
-
-                    <div class="form-actions">
-                        <button id="back-to-investigation-2" class="secondary-btn">继续调查</button>
-                        <button id="submit-accusation" class="primary-btn">提交指认</button>
+    <!-- 案件陈述信封弹框 -->
+    <div id="briefing-modal" class="briefing-modal hidden">
+        <div class="briefing-overlay"></div>
+        <div class="briefing-envelope">
+            <div class="envelope-content">
+                <div class="envelope-header">
+                    <h2>📜 案件陈述</h2>
+                    <button id="close-briefing" class="close-btn">✕</button>
+                </div>
+                <div class="envelope-body">
+                    <p>大人，日安。</p>
+                    <p>我是您的下属。今日清晨，一名樵夫在城外青竹林中发现一具尸体，经核实，死者是武士<strong>金泽武弘</strong>。</p>
+                    <p>现场情况颇为诡异。我们在附近抓获了臭名昭著的大盗<strong>"鬼武"</strong>，他当即承认自己杀了武士；但武士的妻子<strong>花子夫人</strong>，我们发现她在不远处的溪边，精神恍惚，她的证词却与大盗所言大相径庭。</p>
+                    <p>更蹊跷的是，我们请来了城里最负盛名的女巫<strong>市子</strong>，通过"口寄"之术召唤了死者金泽武弘的灵魂，而"他"所说的死因，竟与前两人完全不同。</p>
+                    <p>最初报案的<strong>樵夫吉二郎</strong>，看似只是个路人，但他的话也有些许疑点。</p>
+                    <p>大人，每个人都在说对自己有利的故事。这片竹林里充满了谎言的迷雾，真相恐怕只有一个。请您亲自审问他们，并调查现场遗留的线索，找出竹林之下的唯一真实。</p>
+                    <div class="game-info">
+                        <small style="color: #f39c12;">🔄 每次重新打开页面，证物袋和现场调查会重置，但对话记录会保留</small>
                     </div>
                 </div>
-            </div>
-        </div>
-
-        <!-- 结果界面 -->
-        <div id="result-screen" class="screen">
-            <div class="result-container">
-                <h2 id="result-title">调查结果</h2>
-                <div id="result-content" class="result-content"></div>
-                <button id="restart-game" class="primary-btn">重新开始</button>
+                <div class="envelope-footer">
+                    <button id="start-investigation-envelope" class="primary-btn">开始调查</button>
+                </div>
             </div>
         </div>
     </div>

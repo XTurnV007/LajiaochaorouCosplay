@@ -3,157 +3,27 @@ class VoiceManager {
     constructor() {
         this.currentAudio = null;
         this.currentAudioUrl = null;
-        this.availableVoices = [];
     }
 
-    // 获取可用音色列表
-    async getVoiceList() {
-        try {
-            console.log('🎵 [语音] 获取音色列表...');
-            const response = await fetch(`${AI_CONFIG.BASE_URL}/voice/list`, {
-                method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${AI_CONFIG.API_KEY}`
-                }
-            });
 
-            if (response.ok) {
-                const voices = await response.json();
-                this.availableVoices = voices;
-                console.log('🎵 [语音] 可用音色数量:', voices.length);
-                console.log('🎵 [语音] 音色列表:', voices.slice(0, 5)); // 显示前5个
-                return voices;
-            } else {
-                console.error('🎵 [语音] 获取音色列表失败:', response.status);
-                return [];
-            }
-        } catch (error) {
-            console.error('🎵 [语音] 获取音色列表异常:', error);
-            return [];
-        }
-    }
 
-    // 为角色选择合适的音色
-    selectVoiceForCharacter(characterId, voices) {
-        const rules = VOICE_CONFIG.VOICE_RULES[characterId];
-        if (!rules || !voices || voices.length === 0) {
-            return VOICE_CONFIG.DEFAULT_VOICE;
-        }
 
-        console.log(`🎵 [音色选择] 为角色 ${characterId} 选择音色...`);
-        console.log(`🎵 [音色选择] 规则:`, rules);
-
-        // 计算每个音色的匹配分数
-        const scoredVoices = voices.map(voice => {
-            let score = 0;
-            const voiceName = (voice.voice_name || '').toLowerCase();
-            const voiceType = (voice.voice_type || '').toLowerCase();
-            const category = (voice.category || '').toLowerCase();
-            const fullText = `${voiceName} ${voiceType} ${category}`;
-
-            // 优先级关键词匹配（高分）
-            if (rules.priority) {
-                rules.priority.forEach((keyword, index) => {
-                    if (fullText.includes(keyword)) {
-                        score += (rules.priority.length - index) * 15; // 优先级越高分数越高
-                    }
-                });
-            }
-
-            // 普通关键词匹配
-            rules.keywords.forEach(keyword => {
-                if (fullText.includes(keyword)) {
-                    score += 10;
-                }
-            });
-
-            // 负面关键词扣分
-            if (rules.negativeKeywords) {
-                rules.negativeKeywords.forEach(keyword => {
-                    if (fullText.includes(keyword)) {
-                        score -= 25;
-                    }
-                });
-            }
-
-            // 性别匹配
-            if (rules.gender === 'male') {
-                if (voiceName.includes('男') || voiceType.includes('male') || voiceType.includes('男')) {
-                    score += 30;
-                }
-                if (voiceName.includes('女') || voiceType.includes('female') || voiceType.includes('女')) {
-                    score -= 50; // 性别不匹配严重扣分
-                }
-            } else if (rules.gender === 'female') {
-                if (voiceName.includes('女') || voiceType.includes('female') || voiceType.includes('女')) {
-                    score += 30;
-                }
-                if (voiceName.includes('男') || voiceType.includes('male') || voiceType.includes('男')) {
-                    score -= 50; // 性别不匹配严重扣分
-                }
-            }
-
-            return {
-                ...voice,
-                score: score,
-                matchDetails: {
-                    fullText: fullText,
-                    finalScore: score
-                }
-            };
-        });
-
-        // 按分数排序，选择最高分的音色
-        scoredVoices.sort((a, b) => b.score - a.score);
-
-        console.log(`🎵 [音色选择] 前3个候选音色:`, scoredVoices.slice(0, 3).map(v => ({
-            name: v.voice_name,
-            type: v.voice_type,
-            score: v.score
-        })));
-
-        if (scoredVoices.length > 0 && scoredVoices[0].score > 0) {
-            const selectedVoice = scoredVoices[0];
-            console.log(`🎵 [音色选择] 为 ${characterId} 选择音色: ${selectedVoice.voice_name} (${selectedVoice.voice_type}), 分数: ${selectedVoice.score}`);
-            return selectedVoice.voice_type;
-        }
-
-        // 如果没有合适的音色，使用默认音色
-        console.log(`🎵 [音色选择] 未找到合适音色，使用默认音色`);
-        return VOICE_CONFIG.DEFAULT_VOICE;
-    }
-
-    // 初始化角色音色
-    initializeCharacterVoices(voices) {
-        console.log('🎵 [音色初始化] 开始为所有角色分配音色...');
-
-        Object.keys(VOICE_CONFIG.CHARACTER_VOICES).forEach(characterId => {
-            const selectedVoice = this.selectVoiceForCharacter(characterId, voices);
-            VOICE_CONFIG.CHARACTER_VOICES[characterId] = selectedVoice;
-
-            const character = suspects[characterId];
-            console.log(`🎵 [音色初始化] ${character.name} (${characterId}): ${selectedVoice}`);
-        });
-    }
 
     // 获取角色的音色
     getVoiceForCharacter(characterId) {
         return VOICE_CONFIG.CHARACTER_VOICES[characterId] || VOICE_CONFIG.DEFAULT_VOICE;
     }
 
+
+
     async textToSpeech(text, characterId = null) {
-        console.log('🎵 [语音] 开始语音合成:', text.substring(0, 50) + (text.length > 50 ? '...' : ''));
+
 
         // 根据角色选择音色
         const voiceType = characterId ? this.getVoiceForCharacter(characterId) : VOICE_CONFIG.DEFAULT_VOICE;
         const characterName = characterId ? suspects[characterId]?.name : '系统';
 
-        console.log('🎵 [语音] API配置:', {
-            baseUrl: AI_CONFIG.BASE_URL,
-            hasApiKey: !!AI_CONFIG.API_KEY,
-            character: characterName,
-            voice: voiceType
-        });
+
 
         try {
             // 使用正确的七牛云TTS格式
@@ -168,7 +38,7 @@ class VoiceManager {
                 }
             };
 
-            console.log('🎵 [语音] 发送TTS请求:', requestBody);
+
 
             const response = await fetch(`${AI_CONFIG.BASE_URL}/voice/tts`, {
                 method: 'POST',
@@ -179,23 +49,17 @@ class VoiceManager {
                 body: JSON.stringify(requestBody)
             });
 
-            console.log('🎵 [语音] TTS响应状态:', response.status, response.statusText);
+
 
             if (!response.ok) {
                 const errorText = await response.text();
-                console.error('🎵 [语音] TTS请求失败详情:', errorText);
+
                 throw new Error(`TTS请求失败: ${response.status} - ${errorText}`);
             }
 
             // 根据文档，响应是JSON格式，包含base64编码的音频数据
             const data = await response.json();
-            console.log('🎵 [语音] TTS响应数据:', {
-                reqid: data.reqid,
-                operation: data.operation,
-                sequence: data.sequence,
-                hasData: !!data.data,
-                addition: data.addition
-            });
+
 
             if (data.data) {
                 // 将base64音频数据转换为blob
@@ -206,30 +70,28 @@ class VoiceManager {
                 }
 
                 const audioBlob = new Blob([audioArray], { type: 'audio/mp3' });
-                console.log('🎵 [语音] 创建音频blob，大小:', audioBlob.size, 'bytes');
 
-                if (data.addition && data.addition.duration) {
-                    console.log('🎵 [语音] 音频时长:', data.addition.duration, 'ms');
-                }
+
+
 
                 const audioUrl = URL.createObjectURL(audioBlob);
-                console.log('🎵 [语音] 创建音频URL:', audioUrl);
+
                 await this.playAudio(audioUrl);
             } else {
-                console.warn('🎵 [语音] 响应中没有音频数据');
+
             }
         } catch (error) {
-            console.error('🎵 [语音] 语音合成失败:', error);
+
         }
     }
 
     async playAudio(audioUrl) {
-        console.log('🔊 [音频] 开始播放音频:', audioUrl);
+
 
         try {
             // 停止当前播放的音频
             if (this.currentAudio) {
-                console.log('🔊 [音频] 停止当前播放的音频');
+
                 this.currentAudio.pause();
                 // 如果是blob URL，需要释放
                 if (this.currentAudioUrl && this.currentAudioUrl.startsWith('blob:')) {
@@ -238,25 +100,18 @@ class VoiceManager {
                 this.currentAudio = null;
             }
 
-            console.log('🔊 [音频] 创建新的Audio对象');
+
             this.currentAudio = new Audio(audioUrl);
             this.currentAudioUrl = audioUrl;
 
             // 添加音频事件监听器
-            this.currentAudio.addEventListener('loadstart', () => {
-                console.log('🔊 [音频] 开始加载音频');
-            });
 
-            this.currentAudio.addEventListener('canplay', () => {
-                console.log('🔊 [音频] 音频可以播放');
-            });
 
-            this.currentAudio.addEventListener('play', () => {
-                console.log('🔊 [音频] 音频开始播放');
-            });
+
+
+
 
             this.currentAudio.addEventListener('ended', () => {
-                console.log('🔊 [音频] 音频播放结束');
                 // 播放结束后释放blob URL
                 if (this.currentAudioUrl && this.currentAudioUrl.startsWith('blob:')) {
                     URL.revokeObjectURL(this.currentAudioUrl);
@@ -265,7 +120,6 @@ class VoiceManager {
             });
 
             this.currentAudio.addEventListener('error', (e) => {
-                console.error('🔊 [音频] 音频播放错误:', e);
                 // 出错时也要释放blob URL
                 if (this.currentAudioUrl && this.currentAudioUrl.startsWith('blob:')) {
                     URL.revokeObjectURL(this.currentAudioUrl);
@@ -274,14 +128,14 @@ class VoiceManager {
             });
 
             await this.currentAudio.play();
-            console.log('🔊 [音频] 音频播放成功启动');
+
         } catch (error) {
-            console.error('🔊 [音频] 音频播放失败:', error);
+
         }
     }
 
     stopAudio() {
-        console.log('🛑 [音频] 手动停止音频播放');
+
         if (this.currentAudio) {
             this.currentAudio.pause();
             // 释放blob URL
@@ -290,9 +144,9 @@ class VoiceManager {
                 this.currentAudioUrl = null;
             }
             this.currentAudio = null;
-            console.log('🛑 [音频] 音频已停止');
+
         } else {
-            console.log('🛑 [音频] 没有正在播放的音频');
+
         }
     }
 }
@@ -300,7 +154,7 @@ class VoiceManager {
 // 游戏状态管理
 class GameState {
     constructor() {
-        this.currentScreen = 'briefing';
+        this.currentScreen = 'cover';
         this.currentSuspect = null;
         this.evidence = [];
         this.conversations = {};
@@ -309,6 +163,7 @@ class GameState {
         this.voiceManager = new VoiceManager();
         this.voiceEnabled = false;
         this.sessionId = this.generateSessionId();
+        this.hasSeenCover = false; // 跟踪是否已经看过封面页
         this.loadGameState();
     }
 
@@ -323,7 +178,9 @@ class GameState {
             conversations: this.serializeConversations(),
             sceneInvestigations: this.sceneInvestigations,
             gameCompleted: this.gameCompleted,
-            sessionId: this.sessionId
+            sessionId: this.sessionId,
+            hasSeenCover: this.hasSeenCover,
+            voiceEnabled: this.voiceEnabled
         };
         localStorage.setItem('mistTheater_gameState', JSON.stringify(gameData));
         localStorage.setItem('mistTheater_sessionId', this.sessionId);
@@ -333,6 +190,10 @@ class GameState {
         try {
             const savedData = localStorage.getItem('mistTheater_gameState');
             const savedSessionId = localStorage.getItem('mistTheater_sessionId');
+            
+            // 检查用户是否曾经看过封面页（跨session保存）
+            const hasSeenCover = localStorage.getItem('mistTheater_hasSeenCover') === 'true';
+            this.hasSeenCover = hasSeenCover;
 
             // 检查是否是同一个session
             if (savedData && savedSessionId === this.sessionId) {
@@ -342,20 +203,26 @@ class GameState {
                 this.evidence = gameData.evidence || [];
                 this.sceneInvestigations = gameData.sceneInvestigations || [];
                 this.gameCompleted = gameData.gameCompleted || false;
+                this.hasSeenCover = gameData.hasSeenCover || hasSeenCover;
+                this.voiceEnabled = gameData.voiceEnabled || false;
 
                 // 恢复对话记录
                 if (gameData.conversations) {
                     this.deserializeConversations(gameData.conversations);
                 }
             } else {
-                // 新session，只恢复对话记录，重置证物袋和现场调查
+                // 新session，只恢复对话记录和语音设置，重置证物袋和现场调查
                 if (savedData) {
                     const gameData = JSON.parse(savedData);
 
-                    // 只恢复对话记录
+                    // 只恢复对话记录和语音设置
                     if (gameData.conversations) {
                         this.deserializeConversations(gameData.conversations);
                     }
+                    
+                    // 保留封面页查看状态和语音设置
+                    this.hasSeenCover = gameData.hasSeenCover || hasSeenCover;
+                    this.voiceEnabled = gameData.voiceEnabled || false;
                 }
 
                 // 证物袋和现场调查保持初始状态（空数组）
@@ -395,6 +262,15 @@ class GameState {
 
     clearGameState() {
         localStorage.removeItem('mistTheater_gameState');
+        localStorage.removeItem('mistTheater_hasSeenCover');
+        this.hasSeenCover = false;
+    }
+    
+    // 标记用户已经看过封面页
+    markCoverSeen() {
+        this.hasSeenCover = true;
+        localStorage.setItem('mistTheater_hasSeenCover', 'true');
+        this.saveGameState();
     }
 
     addEvidence(evidence) {
@@ -414,8 +290,11 @@ class GameState {
         } else {
             evidenceList.innerHTML = this.evidence.map(e =>
                 `<div class="evidence-item" data-evidence="${e.id}">
-                    <h4>${e.name}</h4>
-                    <p>${e.description}</p>
+                    ${e.image ? `<img src="${e.image}" alt="${e.name}" class="evidence-image">` : ''}
+                    <div class="evidence-content">
+                        <h4>${e.name}</h4>
+                        <p>${e.description}</p>
+                    </div>
                 </div>`
             ).join('');
         }
@@ -435,6 +314,7 @@ const suspects = {
     onitake: {
         name: "大盗\"鬼武\"",
         avatar: "🗡️",
+        image: "images/characters/onitake.png",
         personality: "粗暴、自负、好面子",
         voiceStyle: "粗犷低沉的男声",
         initialStatement: "哈哈哈，没错，那家伙就是老子杀的！我看上了他老婆的美貌，设计把他们骗到了竹林里。我把他绑在树上，当着他的面强暴了他老婆。那女人很刚烈，哭着喊着要我们决斗，说只能活一个。我解开了那家伙的绳子，跟他正面决斗了二十三回合！最后，我一刀刺穿了他的胸膛。他临死前的眼神？哼，那是敬佩，是败给强者的眼神。那女人趁乱跑了。至于那把值钱的匕首，当然被我拿走了，那是我的战利品！",
@@ -446,6 +326,7 @@ const suspects = {
     hana: {
         name: "花子夫人",
         avatar: "🌸",
+        image: "images/characters/hana.png",
         personality: "表面柔弱、内心冷酷、善于伪装",
         voiceStyle: "柔美温婉的女声",
         initialStatement: "那个坏人...他把我丈夫绑起来...然后...然后对我做了那种事...我受尽了屈辱。之后，那个坏人大笑着走了。我挣扎着爬到我丈夫身边，用他身上的小刀给他割断了绳子。但是我看到他看我的眼神...那不是同情，是嫌弃，是冰冷的嫌弃！我一个被玷污的女人，怎么能承受这样的眼神？我昏过去了，等我醒来的时候，只看到我丈夫胸前插着那把小刀，已经...已经自杀了。都是我害了他...都是我...",
@@ -457,6 +338,7 @@ const suspects = {
     spirit: {
         name: "金泽武弘之魂",
         avatar: "👻",
+        image: "images/characters/spirit.png",
         personality: "庄严、虚伪、死要面子",
         voiceStyle: "庄严威严的男声",
         initialStatement: "我是金泽武弘...在我妻子被那个强盗侮辱之后，那强盗解开了我的绳子。但是我无法洗刷这个耻辱。我的妻子，她用最决绝的眼神看着我，把那把家传的蓝色丝绸柄匕首递给我，示意我必须做出了断。我...我接受了我的命运。在强盗和妻子都离开后，我面向西方，用那把匕首切腹自尽，保住了最后的尊严。我的灵魂因此得到了安息。",
@@ -468,6 +350,7 @@ const suspects = {
     woodcutter: {
         name: "樵夫吉二郎",
         avatar: "🪓",
+        image: "images/characters/woodcutter.png",
         personality: "胆小、贪婪、狡猾",
         voiceStyle: "朴实憨厚的男声",
         initialStatement: "大人，我真的是冤枉的！我就是个打柴的。今天早上，我进竹林想找个好地方砍柴，结果走着走着，就看到...就看到那具尸体躺在那里！旁边只有一把断了的刀，别的什么都没有。吓得我要死，赶紧跑去报官了。我什么都没看见，什么都没拿！",
@@ -489,7 +372,8 @@ const sceneClues = {
         evidence: {
             id: "rope_marks",
             name: "绳索痕迹",
-            description: "竹子上的绳索磨损痕迹，证明确实发生过捆绑"
+            description: "竹子上的绳索磨损痕迹，证明确实发生过捆绑",
+            image: "images/items/rope_marks.png"
         }
     },
     "搜索地面": {
@@ -497,7 +381,8 @@ const sceneClues = {
         evidence: {
             id: "rope_and_hairpin",
             name: "草绳和银簪",
-            description: "一截普通的草绳和一个精致的银簪，银簪应该属于花子夫人"
+            description: "一截普通的草绳和一个精致的银簪，银簪应该属于花子夫人",
+            image: "images/items/rope_and_hairpin.png"
         }
     },
     "检查武器": {
@@ -505,7 +390,8 @@ const sceneClues = {
         evidence: {
             id: "broken_sword",
             name: "断裂的太刀",
-            description: "武士的太刀从中间断裂，说明战斗激烈但兵器质量不佳"
+            description: "武士的太刀从中间断裂，说明战斗激烈但兵器质量不佳",
+            image: "images/items/broken_sword.png"
         }
     },
     "调查周围": {
@@ -513,7 +399,8 @@ const sceneClues = {
         evidence: {
             id: "trampled_area",
             name: "凌乱的现场",
-            description: "大范围的茶花丛被踩踏，还有一个倾倒的酒壶，说明战斗混乱且有人喝了酒"
+            description: "大范围的茶花丛被踩踏，还有一个倾倒的酒壶，说明战斗混乱且有人喝了酒",
+            image: "images/items/trampled_area.png"
         }
     },
     "寻找匕首": {
@@ -521,7 +408,8 @@ const sceneClues = {
         evidence: {
             id: "missing_dagger",
             name: "消失的匕首",
-            description: "武士腰间的匕首鞘是空的，凶器不见了踪影"
+            description: "武士腰间的匕首鞘是空的，凶器不见了踪影",
+            image: "images/items/missing_dagger.png"
         }
     }
 };
@@ -541,44 +429,12 @@ const VOICE_CONFIG = {
     // 默认音色
     DEFAULT_VOICE: 'qiniu_zh_female_wwxkjx',
 
-    // 角色音色映射
+    // 角色音色映射 - 手动指定
     CHARACTER_VOICES: {
-        'onitake': null,    // 大盗"鬼武" - 粗暴男声
-        'hana': null,       // 花子夫人 - 柔美女声  
-        'spirit': null,     // 金泽武弘之魂 - 庄严男声
-        'woodcutter': null  // 樵夫吉二郎 - 朴实男声
-    },
-
-    // 音色选择规则
-    VOICE_RULES: {
-        'onitake': {
-            keywords: ['男', 'male', '粗', '厚', '低沉', '威严', '霸气', '豪迈', '雄浑', '磁性'],
-            negativeKeywords: ['女', 'female', '柔', '甜', '温柔', '清纯'],
-            gender: 'male',
-            style: 'rough',
-            priority: ['粗', '厚', '低沉', '威严', '霸气']
-        },
-        'hana': {
-            keywords: ['女', 'female', '柔', '甜', '温柔', '清纯', '优雅', '婉约', '娇美', '动听'],
-            negativeKeywords: ['男', 'male', '粗', '厚', '低沉'],
-            gender: 'female',
-            style: 'gentle',
-            priority: ['柔', '甜', '温柔', '清纯', '优雅']
-        },
-        'spirit': {
-            keywords: ['男', 'male', '庄严', '威严', '正式', '严肃', '沉稳', '端庄', '肃穆'],
-            negativeKeywords: ['女', 'female', '柔', '甜', '活泼', '俏皮'],
-            gender: 'male',
-            style: 'formal',
-            priority: ['庄严', '威严', '正式', '严肃', '沉稳']
-        },
-        'woodcutter': {
-            keywords: ['男', 'male', '朴实', '老实', '憨厚', '平和', '淳朴', '质朴', '亲切'],
-            negativeKeywords: ['女', 'female', '威严', '霸气', '娇美'],
-            gender: 'male',
-            style: 'simple',
-            priority: ['朴实', '老实', '憨厚', '平和', '淳朴']
-        }
+        'onitake': 'qiniu_zh_male_ybxknjs',    // 大盗"鬼武"
+        'hana': 'qiniu_zh_female_wwkjby',       // 花子夫人
+        'spirit': 'qiniu_zh_male_wncwxz',     // 金泽武弘之魂
+        'woodcutter': 'qiniu_zh_male_cxkjns'  // 樵夫吉二郎
     }
 };
 
@@ -619,6 +475,20 @@ class AIConversation {
         // 使用真实AI生成回应
         response = await this.callAIAPI(playerMessage, presentedEvidence);
 
+        // 如果出示了证据，处理压力等级变化
+        if (presentedEvidence) {
+            const stressIncrease = this.getStressIncrease(presentedEvidence.id, this.suspectId);
+            this.stressLevel += stressIncrease;
+            console.log(`${this.suspect.name} 压力等级增加 ${stressIncrease}，当前等级: ${this.stressLevel}`);
+        } else {
+            // 根据对话内容增加压力
+            const conversationStress = this.getConversationStress(playerMessage);
+            if (conversationStress > 0) {
+                this.stressLevel += conversationStress;
+                console.log(`${this.suspect.name} 对话压力增加 ${conversationStress}，当前等级: ${this.stressLevel}`);
+            }
+        }
+
         this.conversationHistory.push({
             player: playerMessage,
             npc: response,
@@ -630,6 +500,42 @@ class AIConversation {
         game.saveGameState();
 
         return response;
+    }
+
+    // 根据对话内容计算压力增加
+    getConversationStress(message) {
+        const lowerMessage = message.toLowerCase();
+        const suspectId = this.suspectId;
+        
+        // 不同角色对不同话题的敏感度
+        const stressKeywords = {
+            'onitake': {
+                '懦弱|害怕|胆小|酒|喝醉': 1,
+                '失手|推搡|混乱|笨拙': 2
+            },
+            'hana': {
+                '挑拨|刺激|厌倦|不爱': 1,
+                '计划|设计|故意': 2
+            },
+            'spirit': {
+                '跪|求饶|懦弱|害怕': 2,
+                '切腹|自杀|尊严': 1
+            },
+            'woodcutter': {
+                '偷|拿走|贪心|躲藏': 1,
+                '目击|看到|全程': 2
+            }
+        };
+
+        const keywords = stressKeywords[suspectId] || {};
+        for (const [pattern, stress] of Object.entries(keywords)) {
+            const regex = new RegExp(pattern);
+            if (regex.test(lowerMessage)) {
+                return stress;
+            }
+        }
+        
+        return 0;
     }
 
     async callAIAPI(playerMessage, presentedEvidence = null) {
@@ -683,7 +589,7 @@ class AIConversation {
 
 ## 角色扮演核心规则
 1. **严格保持角色一致性**：始终按照角色的性格、动机和背景回答
-2. **情绪表达**：在回答前用括号表达情绪和动作，如"（紧张地擦汗）"、"（愤怒地握拳）"
+2. **情绪表达**：用拟声词表达情绪，不要用说明性语言，如"呜呜..."、"啊啊！"、"哼！"等
 3. **压力反应**：根据压力等级调整回答方式：
    - 0-1级：平静、自信
    - 2-3级：开始紧张、防御性增强
@@ -704,7 +610,8 @@ class AIConversation {
   * 断剑/凌乱现场/消失匕首：会紧张但强装镇定
   * 其他证物：表现得不在乎或不知情
 - 情绪变化：从自负→紧张→愤怒→慌乱
-- 说话示例："哼，老子就是杀了他！"、"那家伙太弱了！"
+- 拟声词表达：愤怒时"哼！"，紧张时"呃..."，自负时"哈！"
+- 说话示例："哼！老子就是杀了他！"、"那家伙太弱了！"
 
 `;
         } else if (suspectId === 'hana') {
@@ -717,7 +624,8 @@ class AIConversation {
   * 消失匕首：紧张但试图掩饰
   * 其他证物：表现得像无辜受害者
 - 情绪变化：从悲伤→紧张→慌乱→几近崩溃
-- 说话示例："我真的很害怕..."、"我什么都不知道..."、"那个坏人..."
+- 拟声词表达：悲伤时"呜呜..."，慌乱时"啊..."，紧张时"嗯..."
+- 说话示例："呜呜...我真的很害怕..."、"啊...我什么都不知道..."、"那个坏人..."
 
 `;
         } else if (suspectId === 'spirit') {
@@ -730,7 +638,8 @@ class AIConversation {
   * 消失匕首：试图维护切腹谎言
   * 其他证物：表现得超然，说已死不在乎
 - 情绪变化：从庄严→防御→愤怒→屈辱
-- 说话示例："我是有尊严地死去的"、"我绝不会做那种事"、"作为武士..."
+- 拟声词表达：愤怒时"呵！"，庄严时"嗯..."，屈辱时"啊啊..."
+- 说话示例："呵！我是有尊严地死去的"、"嗯...我绝不会做那种事"、"作为武士..."
 
 `;
         } else if (suspectId === 'woodcutter') {
@@ -742,7 +651,8 @@ class AIConversation {
   * 消失匕首：极度恐慌，几乎崩溃，这是你的致命弱点
   * 其他证物：表现得胆怯但诚实
 - 情绪变化：从胆怯→紧张→恐慌→几近崩溃
-- 说话示例："我...我真不知道"、"我就是个普通人"、"我发誓没撒谎"
+- 拟声词表达：紧张时"呃..."，恐慌时"啊啊..."，结巴时"我...我"
+- 说话示例："呃...我...我真不知道"、"啊啊...我就是个普通人"、"我发誓没撒谎"
 
 `;
         }
@@ -774,25 +684,25 @@ class AIConversation {
     getEvidenceReactionGuidance(evidenceId, suspectId) {
         const reactions = {
             'onitake': {
-                'broken_sword': '这个证据让你紧张！你需要为自己的"实力"辩护，但要显得有些心虚。压力+2。',
-                'trampled_area': '这个证据让你慌张！你需要解释战斗的激烈，但要露出破绽。压力+2。',
-                'missing_dagger': '这个证据让你极度紧张！你声称拿走了匕首，但要表现得心虚。压力+3。',
-                'rope_marks': '这个证据对你有利！你可以得意地说这证明了你的说法。',
-                'default': '你对这个证据不太在意，表现得漠不关心，说专心对付武士没注意别的。'
+                'broken_sword': '这个证据让你紧张！呃...哼！你需要为自己的"实力"辩护，但要显得有些心虚。压力+2。',
+                'trampled_area': '这个证据让你慌张！啊啊...你需要解释战斗的激烈，但要露出破绽。压力+2。',
+                'missing_dagger': '这个证据让你极度紧张！哈...你声称拿走了匕首，但要表现得心虚。压力+3。',
+                'rope_marks': '这个证据对你有利！你可以得意地说"哼！这证明了我的说法"。',
+                'default': '你对这个证据不太在意，表现得漠不关心，说"哈！专心对付武士没注意别的"。'
             },
             'hana': {
-                'rope_and_hairpin': '这个证据让你极度慌乱！银簪是你最大的破绽，你需要拼命解释。压力+4。',
-                'missing_dagger': '这个证据让你紧张！你知道真相但要撒谎，眼神要闪烁。压力+2。',
-                'default': '你表现得像无辜的受害者，说太害怕了什么都记不清楚。'
+                'rope_and_hairpin': '这个证据让你极度慌乱！啊啊...银簪是你最大的破绽，你需要拼命解释"呜呜...我不知道这怎么会在那里..."。压力+4。',
+                'missing_dagger': '这个证据让你紧张！嗯...你知道真相但要撒谎，眼神要闪烁。压力+2。',
+                'default': '你表现得像无辜的受害者，说"呜呜...太害怕了什么都记不清楚"。'
             },
             'spirit': {
-                'broken_sword': '这个证据让你极度愤怒！这戳中了你的痛处，你要愤怒地为自己辩护。压力+4。',
-                'missing_dagger': '这个证据让你有些紧张！你要维护切腹的谎言。压力+1。',
-                'default': '你表现得超然，说已经死了不在乎这些尘世的物证。'
+                'broken_sword': '这个证据让你极度愤怒！呵！这戳中了你的痛处，你要愤怒地为自己辩护"嗯！我绝不会在战斗中表现懦弱！"。压力+4。',
+                'missing_dagger': '这个证据让你有些紧张！嗯...你要维护切腹的谎言。压力+1。',
+                'default': '你表现得超然，说"呵...已经死了不在乎这些尘世的物证"。'
             },
             'woodcutter': {
-                'missing_dagger': '这个证据让你极度恐慌！这是你的致命弱点，你要拼命否认。压力+5。',
-                'default': '你表现得胆怯但诚实，说自己只是砍柴的什么都不懂。'
+                'missing_dagger': '这个证据让你极度恐慌！啊啊...这是你的致命弱点，你要拼命否认"呃...我...我什么都没拿！"。压力+5。',
+                'default': '你表现得胆怯但诚实，说"呃...我自己只是砍柴的什么都不懂"。'
             }
         };
 
@@ -832,24 +742,24 @@ class AIConversation {
         const suspectId = this.suspectId;
         const responses = {
             'onitake': [
-                "（粗暴地）我已经告诉你真相了！还有什么好问的？",
-                "（不耐烦）那武士就是我杀的，这有什么好怀疑的？",
-                "（自负地）我鬼武从不说谎！"
+                "哼！我已经告诉你真相了！还有什么好问的？",
+                "呃...那武士就是我杀的，这有什么好怀疑的？",
+                "哈！我鬼武从不说谎！"
             ],
             'hana': [
-                "（哭泣）我...我已经说了我知道的一切...",
-                "（颤抖）请不要再逼我回忆那些可怕的事情...",
-                "（悲伤）我只是个可怜的女人..."
+                "呜呜...我...我已经说了我知道的一切...",
+                "啊...请不要再逼我回忆那些可怕的事情...",
+                "呜呜...我只是个可怜的女人..."
             ],
             'spirit': [
-                "（庄严地）我已经告诉了你事情的真相...",
-                "（平静地）我已经死了，这些对我来说已经不重要了...",
-                "（威严地）武士的话就是真理。"
+                "嗯...我已经告诉了你事情的真相...",
+                "呵...我已经死了，这些对我来说已经不重要了...",
+                "嗯！武士的话就是真理。"
             ],
             'woodcutter': [
-                "（胆怯地）我...我真的什么都不知道...",
-                "（结巴）我只是个砍柴的，什么都不懂...",
-                "（紧张地）我发誓我说的都是真的！"
+                "呃...我...我真的什么都不知道...",
+                "我...我只是个砍柴的，什么都不懂...",
+                "啊啊...我发誓我说的都是真的！"
             ]
         };
 
@@ -983,11 +893,285 @@ class AIConversation {
 
 // 界面控制
 function showScreen(screenId) {
+    // 如果是封面页面，直接显示
+    if (screenId === 'cover') {
+        document.querySelectorAll('.screen').forEach(screen => {
+            screen.classList.remove('active');
+        });
+        document.getElementById('cover-screen').classList.add('active');
+        document.body.classList.add('cover-active'); // 禁用body滚动
+        closeBriefingModal();
+        game.currentScreen = screenId;
+        return;
+    }
+
+    // 如果是案件陈述页面，显示信封弹框
+    if (screenId === 'briefing-screen') {
+        document.body.classList.remove('cover-active'); // 恢复body滚动
+        showBriefingModal();
+        game.currentScreen = screenId;
+        return;
+    }
+
+    // 其他游戏页面全屏显示
+    document.body.classList.remove('cover-active'); // 恢复body滚动
+    closeBriefingModal();
     document.querySelectorAll('.screen').forEach(screen => {
         screen.classList.remove('active');
     });
     document.getElementById(screenId).classList.add('active');
     game.currentScreen = screenId;
+}
+
+// 显示案件陈述信封弹框
+function showBriefingModal() {
+    const modal = document.getElementById('briefing-modal');
+    modal.classList.remove('hidden');
+    document.body.classList.add('briefing-open');
+}
+
+// 关闭案件陈述信封弹框
+function closeBriefingModal() {
+    const modal = document.getElementById('briefing-modal');
+    modal.classList.add('hidden');
+    document.body.classList.remove('briefing-open');
+}
+
+// 初始化信封弹框控制
+function initializeBriefingControls() {
+    const modal = document.getElementById('briefing-modal');
+    const startBtn = document.getElementById('start-investigation-envelope');
+    const closeBtn = document.getElementById('close-briefing');
+    const briefingOverlay = document.querySelector('.briefing-overlay');
+    
+    // 开始调查按钮事件 - 直接进入嫌疑人页面
+    if (startBtn) {
+        startBtn.addEventListener('click', () => {
+            updateAPIKey();
+            closeBriefingModal();
+            showScreen('investigation-screen');
+            showPanel('scene-panel'); // 直接显示现场调查面板
+        });
+    }
+    
+    // 关闭按钮事件
+    if (closeBtn) {
+        closeBtn.addEventListener('click', () => {
+            closeBriefingModal();
+            showScreen('cover');
+        });
+    }
+    
+    // 点击遮罩层关闭弹框
+    if (briefingOverlay) {
+        briefingOverlay.addEventListener('click', () => {
+            closeBriefingModal();
+            showScreen('cover');
+        });
+    }
+    
+    // ESC键关闭弹框
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && modal && !modal.classList.contains('hidden')) {
+            closeBriefingModal();
+            showScreen('cover');
+        }
+    });
+}
+
+// 封面页控制
+function initializeCover() {
+    // 添加页面加载完成的淡入效果
+    setTimeout(() => {
+        document.body.style.opacity = '1';
+    }, 100);
+
+    // 检查背景图片是否加载成功
+    const testImg = new Image();
+    testImg.onload = function() {
+        console.log('封面背景图片加载成功');
+    };
+    testImg.onerror = function() {
+        console.warn('封面背景图片加载失败');
+        // 如果图片加载失败，可以在这里添加备用处理
+    };
+    testImg.src = 'images/cover.png';
+    const enterGameBtn = document.getElementById('enter-game');
+    const showSettingsBtn = document.getElementById('show-settings');
+    const saveSettingsBtn = document.getElementById('save-settings');
+    const clearProgressBtn = document.getElementById('clear-progress');
+    const settingsPanel = document.getElementById('settings-panel');
+    const apiKeyInput = document.getElementById('api-key-input');
+
+    // 进入游戏
+    enterGameBtn.addEventListener('click', () => {
+        // 保存API密钥设置
+        const apiKey = apiKeyInput.value.trim();
+        if (apiKey) {
+            AI_CONFIG.API_KEY = apiKey;
+            localStorage.setItem('mistTheater_apiKey', apiKey);
+        }
+        
+        // 标记封面已经看过
+        game.markCoverSeen();
+        
+        showScreen('briefing-screen');
+        
+        // 添加进入游戏的音效（如果有的话）
+        playTransitionEffect();
+    });
+    
+    // 信封弹框控制
+    initializeBriefingControls();
+
+    // 显示设置
+    showSettingsBtn.addEventListener('click', () => {
+        settingsPanel.classList.toggle('hidden');
+    });
+
+    // 保存设置
+    saveSettingsBtn.addEventListener('click', () => {
+        const apiKey = apiKeyInput.value.trim();
+        if (apiKey) {
+            AI_CONFIG.API_KEY = apiKey;
+            localStorage.setItem('mistTheater_apiKey', apiKey);
+            showNotification('设置已保存', 'success');
+        } else {
+            localStorage.removeItem('mistTheater_apiKey');
+            showNotification('已清除API密钥设置', 'info');
+        }
+        settingsPanel.classList.add('hidden');
+    });
+
+    // 清除进度
+    clearProgressBtn.addEventListener('click', () => {
+        if (confirm('确定要清除所有游戏进度吗？此操作不可恢复。')) {
+            game.clearGameState();
+            localStorage.removeItem('mistTheater_apiKey');
+            showNotification('游戏进度已清除', 'success');
+            // 重新加载页面
+            setTimeout(() => {
+                location.reload();
+            }, 1000);
+        }
+    });
+
+    // 加载保存的API密钥
+    const savedApiKey = localStorage.getItem('mistTheater_apiKey');
+    if (savedApiKey) {
+        apiKeyInput.value = savedApiKey;
+        AI_CONFIG.API_KEY = savedApiKey;
+    }
+
+    // 点击设置面板外部关闭
+    settingsPanel.addEventListener('click', (e) => {
+        if (e.target === settingsPanel) {
+            settingsPanel.classList.add('hidden');
+        }
+    });
+
+    // 键盘快捷键
+    document.addEventListener('keydown', (e) => {
+        // ESC键关闭设置面板
+        if (e.key === 'Escape' && !settingsPanel.classList.contains('hidden')) {
+            settingsPanel.classList.add('hidden');
+        }
+        
+        // Enter键进入游戏（当焦点不在输入框时）
+        if (e.key === 'Enter' && document.activeElement.tagName !== 'INPUT' && game.currentScreen === 'cover') {
+            enterGameBtn.click();
+        }
+        
+        // 空格键也可以进入游戏
+        if (e.key === ' ' && document.activeElement.tagName !== 'INPUT' && game.currentScreen === 'cover') {
+            e.preventDefault();
+            enterGameBtn.click();
+        }
+    });
+
+    // 添加鼠标移动效果
+    document.addEventListener('mousemove', (e) => {
+        if (game.currentScreen === 'cover') {
+            const { clientX, clientY } = e;
+            const { innerWidth, innerHeight } = window;
+            
+            const xPercent = (clientX / innerWidth - 0.5) * 2;
+            const yPercent = (clientY / innerHeight - 0.5) * 2;
+            
+            // 轻微的视差效果
+            const coverContent = document.querySelector('.cover-content');
+            if (coverContent) {
+                coverContent.style.transform = `translate(${xPercent * 5}px, ${yPercent * 5}px)`;
+            }
+            
+            // 叶子跟随鼠标轻微移动
+            document.querySelectorAll('.floating-leaf').forEach((leaf, index) => {
+                const multiplier = (index + 1) * 2;
+                leaf.style.transform = `translate(${xPercent * multiplier}px, ${yPercent * multiplier}px)`;
+            });
+        }
+    });
+}
+
+// 过渡效果
+function playTransitionEffect() {
+    // 可以添加音效或其他过渡效果
+    console.log('进入游戏...');
+}
+
+// 通知系统
+function showNotification(message, type = 'info') {
+    // 创建通知元素
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    notification.textContent = message;
+    
+    // 添加样式
+    Object.assign(notification.style, {
+        position: 'fixed',
+        top: '20px',
+        right: '20px',
+        padding: '15px 20px',
+        borderRadius: '8px',
+        color: 'white',
+        fontWeight: '600',
+        zIndex: '9999',
+        opacity: '0',
+        transform: 'translateX(100%)',
+        transition: 'all 0.3s ease'
+    });
+
+    // 根据类型设置背景色
+    switch (type) {
+        case 'success':
+            notification.style.background = '#27ae60';
+            break;
+        case 'error':
+            notification.style.background = '#e74c3c';
+            break;
+        case 'warning':
+            notification.style.background = '#f39c12';
+            break;
+        default:
+            notification.style.background = '#3498db';
+    }
+
+    document.body.appendChild(notification);
+
+    // 显示动画
+    setTimeout(() => {
+        notification.style.opacity = '1';
+        notification.style.transform = 'translateX(0)';
+    }, 100);
+
+    // 自动隐藏
+    setTimeout(() => {
+        notification.style.opacity = '0';
+        notification.style.transform = 'translateX(100%)';
+        setTimeout(() => {
+            document.body.removeChild(notification);
+        }, 300);
+    }, 3000);
 }
 
 function showPanel(panelId) {
@@ -998,37 +1182,61 @@ function showPanel(panelId) {
         btn.classList.remove('active');
     });
 
-    document.getElementById(panelId).classList.add('active');
-    document.getElementById(`nav-${panelId.replace('-panel', '')}`).classList.add('active');
+    const targetPanel = document.getElementById(panelId);
+    const targetNavBtn = document.getElementById(`nav-${panelId.replace('-panel', '')}`);
+    
+    if (targetPanel) targetPanel.classList.add('active');
+    if (targetNavBtn) targetNavBtn.classList.add('active');
 
     // 如果切换到现场调查面板，恢复调查记录和状态
     if (panelId === 'scene-panel') {
         restoreSceneInvestigations();
         restoreSceneState();
+        // 调整热点位置以确保位置正确
+        setTimeout(adjustHotspotPositions, 100);
+    }
+    
+    // 如果切换到嫌疑人面板，同步语音状态
+    if (panelId === 'suspects-panel') {
+        setTimeout(() => {
+            console.log('🎯 切换到嫌疑人面板，当前语音状态:', game.voiceEnabled);
+            syncAllVoiceCheckboxes();
+            console.log('✅ 嫌疑人面板语音状态已同步完成');
+        }, 50);
     }
 }
 
 function restoreSceneInvestigations() {
-    const resultsContainer = document.getElementById('scene-results');
+    const resultsContainer = document.querySelector('.scene-chat-messages');
+    if (!resultsContainer) return;
+
+    // 保留系统提示消息
+    const systemMessage = resultsContainer.querySelector('.scene-chat-message.system');
     resultsContainer.innerHTML = '';
+    if (systemMessage) {
+        resultsContainer.appendChild(systemMessage);
+    }
 
     game.sceneInvestigations.forEach(record => {
-        const resultDiv = document.createElement('div');
-        resultDiv.className = 'scene-result';
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'scene-chat-message investigation';
 
-        // 如果是重复调查，添加相应的样式
-        if (record.isRepeat) {
-            resultDiv.classList.add('repeat');
-        }
+        const contentDiv = document.createElement('div');
+        contentDiv.className = 'message-content';
 
         let content = `<strong>调查结果：</strong>${record.result}`;
         if (record.evidence) {
             content += `<br><strong>发现证据：</strong>${record.evidence}`;
         }
-        content += `<br><small style="color: #7f8c8d;">调查时间: ${record.timestamp}</small>`;
+        contentDiv.innerHTML = content;
 
-        resultDiv.innerHTML = content;
-        resultsContainer.appendChild(resultDiv);
+        const timeDiv = document.createElement('div');
+        timeDiv.className = 'message-time';
+        timeDiv.textContent = `调查时间: ${record.timestamp}`;
+
+        messageDiv.appendChild(contentDiv);
+        messageDiv.appendChild(timeDiv);
+        resultsContainer.appendChild(messageDiv);
     });
 
     resultsContainer.scrollTop = resultsContainer.scrollHeight;
@@ -1084,13 +1292,117 @@ function updateSuspectStatus(conversation) {
     }
 }
 
-// 审问功能
+// 在聊天界面中开始审问
+function startChatInterrogation(suspectId) {
+    game.currentSuspect = suspectId;
+    const suspect = suspects[suspectId];
+
+    // 更新聊天头部信息
+    const chatName = document.getElementById('current-chat-name');
+    const chatAvatar = document.getElementById('current-chat-avatar');
+    
+    if (chatName) chatName.textContent = `审问 ${suspect.name}`;
+    
+    if (chatAvatar && suspect.image) {
+        chatAvatar.src = suspect.image;
+        chatAvatar.alt = suspect.name;
+        chatAvatar.style.display = 'block';
+    }
+
+    // 更新嫌疑人卡片状态
+    document.querySelectorAll('.suspect-chat-card').forEach(card => {
+        card.classList.remove('active');
+    });
+    
+    const currentCard = document.querySelector(`[data-suspect="${suspectId}"]`);
+    if (currentCard) {
+        currentCard.classList.add('active');
+        
+        // 更新聊天预览
+        const preview = currentCard.querySelector('.chat-preview');
+        if (preview) {
+            preview.textContent = '正在审问中...';
+        }
+    }
+
+    // 清空欢迎消息，准备聊天
+    const chatMessages = document.getElementById('chat-messages');
+    chatMessages.innerHTML = '';
+
+    // 启用输入框
+    const chatInput = document.getElementById('chat-input');
+    const sendButton = document.getElementById('send-message');
+    
+    if (chatInput) {
+        chatInput.disabled = false;
+        chatInput.placeholder = `向 ${suspect.name} 提问...`;
+    }
+    if (sendButton) {
+        sendButton.disabled = false;
+    }
+
+    // 初始化对话
+    if (!game.conversations[suspectId]) {
+        game.conversations[suspectId] = new AIConversation(suspectId);
+    }
+
+    const conversation = game.conversations[suspectId];
+
+    // 更新证据显示
+    game.updateEvidenceDisplay();
+
+    // 更新嫌疑人状态显示
+    updateChatSuspectStatus(conversation);
+
+    // 添加系统消息
+    addChatMessage('system', `你开始审问 ${suspect.name}`);
+    
+    // 同步语音状态
+    setTimeout(() => {
+        console.log('🎯 审问开始，当前语音状态:', game.voiceEnabled);
+        syncAllVoiceCheckboxes();
+        console.log('✅ 审问开始时语音状态已同步完成');
+    }, 50);
+
+    // 恢复之前的对话记录
+    if (conversation.conversationHistory.length > 0) {
+        conversation.conversationHistory.forEach(turn => {
+            if (turn.isInitial) {
+                addChatMessage('npc', turn.npc);
+            } else {
+                if (turn.evidence) {
+                    addChatMessage('system', `你出示了证据：${turn.evidence.name}`);
+                }
+                addChatMessage('player', turn.player);
+                addChatMessage('npc', turn.npc);
+            }
+        });
+    } else {
+        // 如果是第一次审问，立即显示预设发言
+        const initialStatement = conversation.getInitialStatement();
+        if (initialStatement) {
+            addChatMessage('npc', initialStatement);
+        }
+    }
+}
+
+// 审问功能 (保留旧的功能用于向后兼容)
 function startInterrogation(suspectId) {
     game.currentSuspect = suspectId;
     const suspect = suspects[suspectId];
 
     document.getElementById('current-suspect-name').textContent = `审问 ${suspect.name}`;
     document.getElementById('chat-messages').innerHTML = '';
+
+    // 设置角色图片
+    const suspectImage = document.getElementById('current-suspect-image');
+    if (suspect.image) {
+        suspectImage.src = suspect.image;
+        suspectImage.alt = suspect.name;
+        suspectImage.style.display = 'block';
+    } else {
+        suspectImage.style.display = 'none';
+    }
 
     // 初始化对话
     if (!game.conversations[suspectId]) {
@@ -1130,6 +1442,66 @@ function startInterrogation(suspectId) {
     }
 }
 
+// 更新聊天界面中的嫌疑人状态显示
+function updateChatSuspectStatus(conversation) {
+    const stressLevel = conversation.stressLevel;
+    const stressPercentage = Math.min((stressLevel / 5) * 100, 100);
+
+    // 更新压力条 - 使用聊天界面专用的ID
+    const stressFill = document.getElementById('chat-stress-fill');
+    const stressText = document.getElementById('chat-stress-text');
+    const emotionIndicator = document.getElementById('chat-emotion-indicator');
+
+    if (stressFill) {
+        stressFill.style.width = `${stressPercentage}%`;
+    }
+
+    // 根据压力等级显示不同的状态
+    let stressLabel, emotion, textColor;
+    if (stressLevel <= 1) {
+        stressLabel = '平静';
+        emotion = '😐 平静';
+        textColor = '#27ae60';
+    } else if (stressLevel <= 2) {
+        stressLabel = '紧张';
+        emotion = '😟 紧张';
+        textColor = '#f39c12';
+    } else if (stressLevel <= 3) {
+        stressLabel = '焦虑';
+        emotion = '😰 焦虑';
+        textColor = '#e67e22';
+    } else if (stressLevel <= 4) {
+        stressLabel = '恐慌';
+        emotion = '😨 恐慌';
+        textColor = '#e74c3c';
+    } else {
+        stressLabel = '崩溃';
+        emotion = '😱 崩溃';
+        textColor = '#c0392b';
+    }
+
+    if (stressText) {
+        stressText.textContent = stressLabel;
+        stressText.style.color = textColor;
+    }
+
+    if (emotionIndicator) {
+        emotionIndicator.textContent = emotion;
+        emotionIndicator.style.backgroundColor = `${textColor}20`;
+        emotionIndicator.style.border = `1px solid ${textColor}`;
+    }
+}
+
+// 在聊天界面中添加消息
+function addChatMessage(type, content) {
+    const messagesContainer = document.getElementById('chat-messages');
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `message ${type}`;
+    messageDiv.textContent = content;
+    messagesContainer.appendChild(messageDiv);
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+
 function addMessage(type, content) {
     const messagesContainer = document.getElementById('chat-messages');
     const messageDiv = document.createElement('div');
@@ -1143,10 +1515,15 @@ async function sendMessage() {
     const input = document.getElementById('chat-input');
     const message = input.value.trim();
 
-    if (!message) return;
+    if (!message || !game.currentSuspect) return;
 
     input.value = '';
-    addMessage('player', message);
+    
+    // 根据当前界面选择合适的添加消息函数
+    const isInChatInterface = document.querySelector('.suspects-chat-container');
+    const addMessageFunc = isInChatInterface ? addChatMessage : addMessage;
+    
+    addMessageFunc('player', message);
 
     // 显示AI思考中
     const thinkingMsg = document.createElement('div');
@@ -1160,20 +1537,38 @@ async function sendMessage() {
 
         // 移除思考中消息
         thinkingMsg.remove();
-        addMessage('npc', response);
+        addMessageFunc('npc', response);
 
         // 更新嫌疑人状态
-        updateSuspectStatus(conversation);
+        if (isInChatInterface) {
+            updateChatSuspectStatus(conversation);
+        } else {
+            updateSuspectStatus(conversation);
+        }
+
+        // 更新聊天预览（只在聊天界面中）
+        if (isInChatInterface) {
+            const currentCard = document.querySelector(`[data-suspect="${game.currentSuspect}"]`);
+            if (currentCard) {
+                const preview = currentCard.querySelector('.chat-preview');
+                if (preview) {
+                    // 显示最后的回复片段
+                    const shortResponse = response.length > 20 ? response.substring(0, 20) + '...' : response;
+                    preview.textContent = shortResponse;
+                }
+            }
+        }
 
         // 如果启用了语音，播放AI回复
-        console.log('🎤 [语音检查] 语音状态:', {
-            voiceEnabled: game.voiceEnabled,
-            hasApiKey: !!AI_CONFIG.API_KEY,
-            apiKeyValid: AI_CONFIG.API_KEY !== 'YOUR_API_KEY_HERE'
-        });
-
+        console.log('检查语音播放条件:');
+        console.log('- 语音启用状态:', game.voiceEnabled);
+        console.log('- API密钥存在:', !!AI_CONFIG.API_KEY);
+        console.log('- API密钥有效:', AI_CONFIG.API_KEY !== 'YOUR_API_KEY_HERE');
+        console.log('- 实际的game对象:', game);
+        console.log('- 实际的voiceEnabled值:', game.voiceEnabled, typeof game.voiceEnabled);
+        
         if (game.voiceEnabled && AI_CONFIG.API_KEY && AI_CONFIG.API_KEY !== 'YOUR_API_KEY_HERE') {
-            console.log('🎤 [语音] 开始播放AI回复语音');
+            console.log('播放语音回复...');
             await game.voiceManager.textToSpeech(response, game.currentSuspect);
         } else {
             let reason = '';
@@ -1184,35 +1579,37 @@ async function sendMessage() {
             } else if (AI_CONFIG.API_KEY === 'YOUR_API_KEY_HERE') {
                 reason = 'API密钥无效';
             }
-            console.log('🎤 [语音] 跳过语音播放 -', reason);
+            console.log('语音未播放:', reason);
         }
     } catch (error) {
         thinkingMsg.textContent = '对话出现错误，请重试。';
     }
 }
 
-
-
 function updateAPIKey() {
     const apiKeyInput = document.getElementById('api-key-input');
     const apiKey = apiKeyInput.value.trim();
 
-    console.log('🔑 [API密钥] 更新API密钥:', apiKey ? `${apiKey.substring(0, 10)}...` : '(空)');
+
 
     if (apiKey) {
         AI_CONFIG.API_KEY = apiKey;
-        console.log('🔑 [API密钥] API密钥已更新，语音功能可用');
+
     } else {
-        console.log('🔑 [API密钥] 未提供API密钥，语音功能不可用');
+
     }
 }
 
 // 出示证据功能
 function presentEvidence(evidenceId) {
     const evidence = game.evidence.find(e => e.id === evidenceId);
-    if (!evidence) return;
+    if (!evidence || !game.currentSuspect) return;
 
-    addMessage('system', `你出示了证据：${evidence.name}`);
+    // 根据当前界面选择合适的添加消息函数
+    const isInChatInterface = document.querySelector('.suspects-chat-container');
+    const addMessageFunc = isInChatInterface ? addChatMessage : addMessage;
+
+    addMessageFunc('system', `你出示了证据：${evidence.name}`);
 
     // 显示AI思考中
     const thinkingMsg = document.createElement('div');
@@ -1226,31 +1623,28 @@ function presentEvidence(evidenceId) {
             const response = await conversation.generateResponse(`[出示证据: ${evidence.name}]`, evidence);
 
             thinkingMsg.remove();
-            addMessage('npc', response);
+            addMessageFunc('npc', response);
 
             // 更新嫌疑人状态
-            updateSuspectStatus(conversation);
+            if (isInChatInterface) {
+                updateChatSuspectStatus(conversation);
+                
+                // 更新聊天预览
+                const currentCard = document.querySelector(`[data-suspect="${game.currentSuspect}"]`);
+                if (currentCard) {
+                    const preview = currentCard.querySelector('.chat-preview');
+                    if (preview) {
+                        const shortResponse = response.length > 20 ? response.substring(0, 20) + '...' : response;
+                        preview.textContent = shortResponse;
+                    }
+                }
+            } else {
+                updateSuspectStatus(conversation);
+            }
 
             // 如果启用了语音，播放AI回复
-            console.log('🎤 [语音检查] 证据出示后语音状态:', {
-                voiceEnabled: game.voiceEnabled,
-                hasApiKey: !!AI_CONFIG.API_KEY,
-                apiKeyValid: AI_CONFIG.API_KEY !== 'YOUR_API_KEY_HERE'
-            });
-
             if (game.voiceEnabled && AI_CONFIG.API_KEY && AI_CONFIG.API_KEY !== 'YOUR_API_KEY_HERE') {
-                console.log('🎤 [语音] 开始播放证据回应语音');
                 await game.voiceManager.textToSpeech(response, game.currentSuspect);
-            } else {
-                let reason = '';
-                if (!game.voiceEnabled) {
-                    reason = '语音功能未启用 - 请勾选"启用语音回复"';
-                } else if (!AI_CONFIG.API_KEY) {
-                    reason = '缺少API密钥';
-                } else if (AI_CONFIG.API_KEY === 'YOUR_API_KEY_HERE') {
-                    reason = 'API密钥无效';
-                }
-                console.log('🎤 [语音] 跳过证据回应语音播放 -', reason);
             }
         } catch (error) {
             thinkingMsg.textContent = '对话出现错误，请重试。';
@@ -1267,13 +1661,22 @@ function investigateHotspot(clueKey) {
     const alreadyInvestigated = game.sceneInvestigations.some(record => record.command === clueKey);
     const hotspot = document.querySelector(`[data-clue="${clueKey}"]`);
 
-    const resultsContainer = document.getElementById('scene-results');
-    const resultDiv = document.createElement('div');
-    resultDiv.className = 'scene-result';
+    const resultsContainer = document.querySelector('.scene-chat-messages');
+    if (!resultsContainer) return;
+
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'scene-chat-message investigation';
+
+    const contentDiv = document.createElement('div');
+    contentDiv.className = 'message-content';
+
+    const timeDiv = document.createElement('div');
+    timeDiv.className = 'message-time';
+    timeDiv.textContent = `调查时间: ${new Date().toLocaleTimeString()}`;
 
     let investigationRecord = {
         command: clueKey,
-        timestamp: new Date().toLocaleTimeString()
+        timestamp: timeDiv.textContent.replace('调查时间: ', '')
     };
 
     if (foundClue) {
@@ -1286,18 +1689,17 @@ function investigateHotspot(clueKey) {
                 "这个区域你已经彻底搜查过了。"
             ];
             const randomMessage = repeatMessages[Math.floor(Math.random() * repeatMessages.length)];
-            resultDiv.innerHTML = `<strong>调查结果：</strong>${randomMessage}`;
-            resultDiv.classList.add('repeat');
+            contentDiv.innerHTML = `<strong>调查结果：</strong>${randomMessage}`;
             investigationRecord.result = randomMessage;
             investigationRecord.isRepeat = true;
         } else {
             // 首次调查
-            resultDiv.innerHTML = `<strong>调查结果：</strong>${foundClue.result}`;
+            contentDiv.innerHTML = `<strong>调查结果：</strong>${foundClue.result}`;
             investigationRecord.result = foundClue.result;
 
             if (foundClue.evidence) {
                 game.addEvidence(foundClue.evidence);
-                resultDiv.innerHTML += `<br><strong>发现证据：</strong>${foundClue.evidence.name}`;
+                contentDiv.innerHTML += `<br><strong>发现证据：</strong>${foundClue.evidence.name}`;
                 investigationRecord.evidence = foundClue.evidence.name;
             }
 
@@ -1308,31 +1710,36 @@ function investigateHotspot(clueKey) {
         }
     } else {
         const result = `你调查了这个区域，但没有发现什么特别的线索。`;
-        resultDiv.innerHTML = `<strong>调查结果：</strong>${result}`;
+        contentDiv.innerHTML = `<strong>调查结果：</strong>${result}`;
         investigationRecord.result = result;
     }
+
+    // 构建消息元素
+    messageDiv.appendChild(contentDiv);
+    messageDiv.appendChild(timeDiv);
 
     // 保存调查记录
     game.sceneInvestigations.push(investigationRecord);
     game.saveGameState();
 
-    resultsContainer.appendChild(resultDiv);
+    resultsContainer.appendChild(messageDiv);
     resultsContainer.scrollTop = resultsContainer.scrollHeight;
 
     // 添加调查动画效果
-    resultDiv.style.opacity = '0';
-    resultDiv.style.transform = 'translateY(20px)';
+    messageDiv.style.opacity = '0';
+    messageDiv.style.transform = 'translateY(20px)';
     setTimeout(() => {
-        resultDiv.style.transition = 'all 0.5s ease';
-        resultDiv.style.opacity = '1';
-        resultDiv.style.transform = 'translateY(0)';
+        messageDiv.style.transition = 'all 0.5s ease';
+        messageDiv.style.opacity = '1';
+        messageDiv.style.transform = 'translateY(0)';
     }, 100);
 }
 
 // 切换热点显示
 function toggleHotspots() {
     const hotspots = document.querySelectorAll('.hotspot');
-    const isVisible = hotspots[0].classList.contains('visible');
+    const isVisible = hotspots.length > 0 && hotspots[0].classList.contains('visible');
+    const button = document.getElementById('toggle-hotspots');
 
     hotspots.forEach(hotspot => {
         if (isVisible) {
@@ -1342,8 +1749,19 @@ function toggleHotspots() {
         }
     });
 
-    const button = document.getElementById('toggle-hotspots');
-    button.textContent = isVisible ? '显示提示' : '隐藏提示';
+    // 切换眼睛图标状态
+    if (button) {
+        if (isVisible) {
+            // 从显示提示切换到隐藏提示
+            button.classList.remove('show-closed');
+            button.classList.add('show-closed');
+            button.title = '隐藏提示';
+        } else {
+            // 从隐藏提示切换到显示提示
+            button.classList.remove('show-closed');
+            button.title = '显示提示';
+        }
+    }
 }
 
 
@@ -1380,9 +1798,15 @@ function initializeSceneInteraction() {
     const crimeSceneImage = document.getElementById('crime-scene-image');
     if (crimeSceneImage) {
         crimeSceneImage.addEventListener('load', adjustHotspotPositions);
+        
+        // 如果图片已经加载完成，立即调整位置
+        if (crimeSceneImage.complete) {
+            adjustHotspotPositions();
+        }
 
         // 首次加载时显示热点提示3秒
         setTimeout(() => {
+            adjustHotspotPositions(); // 确保在显示提示前位置正确
             const hotspots = document.querySelectorAll('.hotspot');
             hotspots.forEach(hotspot => hotspot.classList.add('visible'));
 
@@ -1393,13 +1817,61 @@ function initializeSceneInteraction() {
     }
 
     // 窗口大小改变时重新调整
-    window.addEventListener('resize', adjustHotspotPositions);
+    window.addEventListener('resize', () => {
+        setTimeout(adjustHotspotPositions, 100); // 延迟一点确保布局完成
+    });
 }
 
-// 调整热点位置以适应不同屏幕尺寸
+// 调整热点位置以适应实际图片尺寸
 function adjustHotspotPositions() {
-    // 这个函数可以根据实际图片尺寸动态调整热点位置
-    // 目前使用CSS百分比定位，在大多数情况下应该工作良好
+    const image = document.getElementById('crime-scene-image');
+    const container = document.querySelector('.scene-image-container');
+    
+    if (!image || !container) return;
+    
+    // 等待图片加载完成
+    if (!image.complete) {
+        image.addEventListener('load', adjustHotspotPositions);
+        return;
+    }
+    
+    // 获取容器和图片的实际尺寸
+    const containerRect = container.getBoundingClientRect();
+    const imageRect = image.getBoundingClientRect();
+    
+    // 计算图片在容器中的实际位置和尺寸
+    const scaleX = imageRect.width / containerRect.width;
+    const scaleY = imageRect.height / containerRect.height;
+    const offsetX = (containerRect.width - imageRect.width) / 2;
+    const offsetY = (containerRect.height - imageRect.height) / 2;
+    
+    // 热点原始位置数据（相对于图片的百分比位置）
+    const hotspotData = {
+        'hotspot-body': { x: 52, y: 58, width: 8, height: 12 },
+        'hotspot-sword': { x: 45, y: 70, width: 6, height: 8 },
+        'hotspot-trees': { x: 76, y: 34, width: 8, height: 15 },
+        'hotspot-ground': { x: 68, y: 87, width: 10, height: 6 },
+        'hotspot-flowers': { x: 8, y: 75, width: 12, height: 12 },
+        'hotspot-rope': { x: 50, y: 65, width: 6, height: 8 }
+    };
+    
+    // 更新每个热点的位置
+    Object.entries(hotspotData).forEach(([id, data]) => {
+        const hotspot = document.getElementById(id);
+        if (!hotspot) return;
+        
+        // 计算相对于容器的实际位置
+        const left = offsetX + (data.x / 100) * imageRect.width;
+        const top = offsetY + (data.y / 100) * imageRect.height;
+        const width = Math.max((data.width / 100) * imageRect.width, 40);
+        const height = Math.max((data.height / 100) * imageRect.height, 40);
+        
+        // 应用位置和尺寸
+        hotspot.style.left = `${left}px`;
+        hotspot.style.top = `${top}px`;
+        hotspot.style.width = `${width}px`;
+        hotspot.style.height = `${height}px`;
+    });
 }
 
 // 恢复现场调查状态
@@ -1418,6 +1890,7 @@ function restoreSceneState() {
     });
 }
 
+
 // 结案指认功能
 function submitAccusation() {
     const killer = document.getElementById('killer-select').value;
@@ -1435,22 +1908,35 @@ function submitAccusation() {
 }
 
 function evaluateAccusation(killer, method, motive) {
-    // 简化的评判逻辑
+    // 评判逻辑
     const correctKiller = killer === 'onitake';
-    const methodContainsKey = method.includes('失手') || method.includes('混乱') || method.includes('推搡');
-    const motiveContainsKey = motive.includes('面子') || motive.includes('名誉') || motive.includes('形象');
-
-    return correctKiller && methodContainsKey && motiveContainsKey;
+    
+    // 手法关键词 - 更宽松的匹配
+    const methodKeywords = [
+        '失手', '混乱', '推搡', '意外', '不小心', '失控', 
+        '争斗', '扭打', '慌乱', '酒后', '喝酒', '酒精',
+        '断剑', '断刀', '质量差', '劣质', '破刀'
+    ];
+    const methodContainsKey = methodKeywords.some(keyword => method.includes(keyword));
+    
+    // 动机关键词 - 更宽松的匹配  
+    const motiveKeywords = [
+        '面子', '名誉', '形象', '尊严', '声誉', '威望',
+        '吹牛', '自负', '好面子', '不服', '逞强',
+        '维护', '保持', '掩饰'
+    ];
+    const motiveContainsKey = motiveKeywords.some(keyword => motive.includes(keyword));
+    
+    // 只要凶手正确，并且手法或动机有一个正确就算通过
+    return correctKiller && (methodContainsKey || motiveContainsKey);
 }
 
 function showResult(isCorrect, killer, method, motive) {
-    const resultTitle = document.getElementById('result-title');
-    const resultContent = document.getElementById('result-content');
-
+    let title, content;
+    
     if (isCorrect) {
-        resultTitle.textContent = '🎉 破案成功！';
-        resultTitle.style.color = '#27ae60';
-        resultContent.innerHTML = `
+        title = '🎉 破案成功！';
+        content = `
             <h3>恭喜！你成功还原了真相！</h3>
             <p><strong>你的推理：</strong></p>
             <p><strong>凶手：</strong>${suspects[killer]?.name || killer}</p>
@@ -1463,9 +1949,8 @@ function showResult(isCorrect, killer, method, motive) {
             <p>每个人都在为自己的利益撒谎：鬼武为了面子，花子为了脱罪，武士之魂为了尊严，樵夫为了掩盖盗窃。</p>
         `;
     } else {
-        resultTitle.textContent = '❌ 真相未明';
-        resultTitle.style.color = '#e74c3c';
-        resultContent.innerHTML = `
+        title = '❌ 真相未明';
+        content = `
             <h3>很遗憾，你的推理还不够准确。</h3>
             <p><strong>你的推理：</strong></p>
             <p><strong>凶手：</strong>${suspects[killer]?.name || killer}</p>
@@ -1473,33 +1958,103 @@ function showResult(isCorrect, killer, method, motive) {
             <p><strong>动机：</strong>${motive}</p>
             
             <h3>提示：</h3>
-            <p>真正的凶手确实动手杀了人，但过程可能不像他说的那样光彩。仔细想想现场的证据和每个人证词中的矛盾之处。</p>
-            <p>每个人都有自己的秘密和撒谎的理由。试着从他们的性格和动机出发，找出真相。</p>
+            <div style="background: rgba(241, 196, 15, 0.2); padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #f1c40f;">
+                <h4 style="color: #f39c12; margin-bottom: 15px;">💡 破案关键提示</h4>
+                <p><strong>正确凶手：</strong>大盗"鬼武"</p>
+                <p><strong>手法关键词：</strong>失手、混乱、推搡、意外、争斗、酒后、断剑等</p>
+                <p><strong>动机关键词：</strong>面子、名誉、形象、尊严、好面子、维护等</p>
+                <p><strong>核心真相：</strong>鬼武确实杀了武士，但不是光荣的决斗，而是在混乱中失手杀死了跪地求饶的武士。他撒谎是为了维护自己"强大"的形象。</p>
+            </div>
+            
+            <p>仔细想想现场的证据和每个人证词中的矛盾之处。每个人都有自己的秘密和撒谎的理由。</p>
         `;
     }
 
-    showScreen('result-screen');
+    // 显示结果弹框而不跳转页面
+    showResultModal(isCorrect, title, content);
     game.gameCompleted = true;
+}
+
+// 显示结果弹框
+function showResultModal(isCorrect, title, content) {
+    // 创建结果弹框
+    const modal = document.createElement('div');
+    modal.className = 'result-modal';
+    modal.innerHTML = `
+        <div class="result-overlay"></div>
+        <div class="result-popup">
+            <div class="result-header">
+                <h2 style="color: ${isCorrect ? '#27ae60' : '#e74c3c'}">${title}</h2>
+                <button class="close-result-btn">✕</button>
+            </div>
+            <div class="result-body">
+                ${content}
+            </div>
+            <div class="result-footer">
+                <button id="restart-game-modal" class="primary-btn">重新开始</button>
+                <button class="secondary-btn close-result-btn">继续调查</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // 添加关闭事件
+    modal.querySelectorAll('.close-result-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.body.removeChild(modal);
+        });
+    });
+    
+    // 添加重新开始事件
+    document.getElementById('restart-game-modal').addEventListener('click', () => {
+        if (confirm('确定要重新开始游戏吗？这将清除所有进度。')) {
+            game.clearGameState();
+            location.reload();
+        }
+    });
+    
+    // 点击遮罩关闭
+    modal.querySelector('.result-overlay').addEventListener('click', () => {
+        document.body.removeChild(modal);
+    });
+}
+
+// 全局语音同步函数
+function syncAllVoiceCheckboxes() {
+    const checkboxes = ['chat-voice-enabled', 'interrogation-voice-enabled'];
+    let syncedCount = 0;
+    
+    checkboxes.forEach(id => {
+        const checkbox = document.getElementById(id);
+        if (checkbox) {
+            // 只在状态不一致时才同步，避免触发change事件
+            if (checkbox.checked !== game.voiceEnabled) {
+                checkbox.checked = game.voiceEnabled;
+                console.log(`🔄 同步语音复选框 ${id}: ${game.voiceEnabled}`);
+            }
+            syncedCount++;
+        } else {
+            console.log(`❌ 未找到语音复选框 ${id}`);
+        }
+    });
+    
+    console.log(`🎯 语音复选框同步完成 (${syncedCount}/${checkboxes.length}), 当前状态:`, game.voiceEnabled);
 }
 
 // 事件监听器
 document.addEventListener('DOMContentLoaded', async function () {
-    // 初始化语音功能
-    if (AI_CONFIG.API_KEY && AI_CONFIG.API_KEY !== 'YOUR_API_KEY_HERE') {
-        console.log('🎵 [初始化] 开始获取音色列表...');
-        const voices = await game.voiceManager.getVoiceList();
-
-        if (voices.length > 0) {
-            // 为所有角色分配合适的音色
-            game.voiceManager.initializeCharacterVoices(voices);
-
-            // 设置默认音色
-            VOICE_CONFIG.DEFAULT_VOICE = voices[0].voice_type;
-            console.log('🎵 [初始化] 音色分配完成');
-        } else {
-            console.log('🎵 [初始化] 未获取到音色列表，使用默认配置');
-        }
+    // 总是先显示封面页，让用户手动点击"进入游戏"
+    showScreen('cover');
+    
+    // 根据是否看过封面调整按钮文本
+    const enterGameBtn = document.getElementById('enter-game');
+    if (game.hasSeenCover && enterGameBtn) {
+        enterGameBtn.textContent = '继续游戏';
     }
+    
+    // 初始化封面页
+    initializeCover();
 
     // 开始调查按钮
     document.getElementById('start-investigation').addEventListener('click', () => {
@@ -1519,9 +2074,17 @@ document.addEventListener('DOMContentLoaded', async function () {
     // 导航按钮
     document.getElementById('nav-suspects').addEventListener('click', () => showPanel('suspects-panel'));
     document.getElementById('nav-scene').addEventListener('click', () => showPanel('scene-panel'));
-    document.getElementById('nav-accusation').addEventListener('click', () => showScreen('accusation-screen'));
+    document.getElementById('nav-accusation').addEventListener('click', () => showPanel('accusation-panel'));
 
-    // 审问按钮
+    // 嫌疑人聊天卡片点击事件
+    document.querySelectorAll('.suspect-chat-card').forEach(card => {
+        card.addEventListener('click', (e) => {
+            const suspectId = card.dataset.suspect;
+            startChatInterrogation(suspectId);
+        });
+    });
+
+    // 审问按钮（保留用于向后兼容）
     document.querySelectorAll('.interrogate-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const suspectId = e.target.closest('.suspect-card').dataset.suspect;
@@ -1535,7 +2098,7 @@ document.addEventListener('DOMContentLoaded', async function () {
     });
 
     document.getElementById('back-to-investigation-2').addEventListener('click', () => {
-        showScreen('investigation-screen');
+        showPanel('scene-panel'); // 返回到现场调查面板
     });
 
     // 聊天输入
@@ -1566,15 +2129,25 @@ document.addEventListener('DOMContentLoaded', async function () {
 
 
 
-    // 语音开关
-    document.getElementById('voice-enabled').addEventListener('change', (e) => {
-        game.voiceEnabled = e.target.checked;
-        console.log('🎛️ [语音开关] 语音功能已', game.voiceEnabled ? '启用' : '禁用');
-    });
+    // 设置语音控件 - 简化版
+    // 语音控制现在直接在HTML的onclick中处理
+
+    // 在游戏加载完成后同步语音状态 - 延迟确保DOM完全加载
+    setTimeout(() => {
+        console.log('🎮 游戏加载完成，当前语音状态:', game.voiceEnabled);
+        syncAllVoiceCheckboxes();
+        console.log('🔄 延迟同步语音状态完成:', game.voiceEnabled);
+    }, 100);
+    
+    // 额外的同步检查 - 确保状态正确
+    setTimeout(() => {
+        console.log('🔍 二次检查语音状态:', game.voiceEnabled);
+        syncAllVoiceCheckboxes();
+    }, 500);
 
     // 停止音频按钮
     document.getElementById('stop-audio').addEventListener('click', () => {
-        console.log('🛑 [用户操作] 用户点击停止音频按钮');
+
         game.voiceManager.stopAudio();
     });
 
@@ -1600,4 +2173,5 @@ document.addEventListener('DOMContentLoaded', async function () {
     console.log('游戏已加载，发现证据数量:', game.evidence.length);
     console.log('对话记录数量:', Object.keys(game.conversations).length);
     console.log('当前session ID:', game.sessionId);
+    console.log('是否已看过封面:', game.hasSeenCover);
 });
