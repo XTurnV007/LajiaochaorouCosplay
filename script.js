@@ -1,153 +1,298 @@
 // 语音功能类
 class VoiceManager {
     constructor() {
-        this.isRecording = false;
-        this.mediaRecorder = null;
-        this.audioChunks = [];
         this.currentAudio = null;
+        this.currentAudioUrl = null;
+        this.availableVoices = [];
     }
 
-    async startRecording() {
+    // 获取可用音色列表
+    async getVoiceList() {
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            this.mediaRecorder = new MediaRecorder(stream);
-            this.audioChunks = [];
-
-            this.mediaRecorder.ondataavailable = (event) => {
-                this.audioChunks.push(event.data);
-            };
-
-            this.mediaRecorder.onstop = async () => {
-                const audioBlob = new Blob(this.audioChunks, { type: 'audio/wav' });
-                await this.processRecording(audioBlob);
-            };
-
-            this.mediaRecorder.start();
-            this.isRecording = true;
-            return true;
-        } catch (error) {
-            console.error('录音失败:', error);
-            alert('无法访问麦克风，请检查权限设置');
-            return false;
-        }
-    }
-
-    stopRecording() {
-        if (this.mediaRecorder && this.isRecording) {
-            this.mediaRecorder.stop();
-            this.isRecording = false;
-
-            // 停止所有音轨
-            this.mediaRecorder.stream.getTracks().forEach(track => track.stop());
-        }
-    }
-
-    async processRecording(audioBlob) {
-        try {
-            // 将音频转换为base64或上传到服务器
-            const audioUrl = await this.uploadAudio(audioBlob);
-            const text = await this.speechToText(audioUrl);
-
-            if (text) {
-                // 将识别的文本填入输入框
-                const chatInput = document.getElementById('chat-input');
-                if (chatInput) {
-                    chatInput.value = text;
-                }
-            }
-        } catch (error) {
-            console.error('语音处理失败:', error);
-        }
-    }
-
-    async uploadAudio(audioBlob) {
-        // 这里需要实现音频上传到服务器的逻辑
-        // 暂时返回一个模拟的URL
-        return 'http://example.com/audio.mp3';
-    }
-
-    async speechToText(audioUrl) {
-        try {
-            const response = await fetch(`${AI_CONFIG.BASE_URL}/voice/asr`, {
-                method: 'POST',
+            console.log('🎵 [语音] 获取音色列表...');
+            const response = await fetch(`${AI_CONFIG.BASE_URL}/voice/list`, {
+                method: 'GET',
                 headers: {
-                    'Content-Type': 'application/json',
                     'Authorization': `Bearer ${AI_CONFIG.API_KEY}`
-                },
-                body: JSON.stringify({
-                    model: VOICE_CONFIG.ASR_MODEL,
-                    audio: {
-                        format: "asr",
-                        url: audioUrl
-                    }
-                })
+                }
             });
 
-            if (!response.ok) {
-                throw new Error(`ASR请求失败: ${response.status}`);
+            if (response.ok) {
+                const voices = await response.json();
+                this.availableVoices = voices;
+                console.log('🎵 [语音] 可用音色数量:', voices.length);
+                console.log('🎵 [语音] 音色列表:', voices.slice(0, 5)); // 显示前5个
+                return voices;
+            } else {
+                console.error('🎵 [语音] 获取音色列表失败:', response.status);
+                return [];
             }
-
-            const data = await response.json();
-            return data.text || data.result?.text;
         } catch (error) {
-            console.error('语音识别失败:', error);
-            return null;
+            console.error('🎵 [语音] 获取音色列表异常:', error);
+            return [];
         }
     }
 
-    async textToSpeech(text) {
+    // 为角色选择合适的音色
+    selectVoiceForCharacter(characterId, voices) {
+        const rules = VOICE_CONFIG.VOICE_RULES[characterId];
+        if (!rules || !voices || voices.length === 0) {
+            return VOICE_CONFIG.DEFAULT_VOICE;
+        }
+
+        console.log(`🎵 [音色选择] 为角色 ${characterId} 选择音色...`);
+        console.log(`🎵 [音色选择] 规则:`, rules);
+
+        // 计算每个音色的匹配分数
+        const scoredVoices = voices.map(voice => {
+            let score = 0;
+            const voiceName = (voice.voice_name || '').toLowerCase();
+            const voiceType = (voice.voice_type || '').toLowerCase();
+            const category = (voice.category || '').toLowerCase();
+            const fullText = `${voiceName} ${voiceType} ${category}`;
+
+            // 优先级关键词匹配（高分）
+            if (rules.priority) {
+                rules.priority.forEach((keyword, index) => {
+                    if (fullText.includes(keyword)) {
+                        score += (rules.priority.length - index) * 15; // 优先级越高分数越高
+                    }
+                });
+            }
+
+            // 普通关键词匹配
+            rules.keywords.forEach(keyword => {
+                if (fullText.includes(keyword)) {
+                    score += 10;
+                }
+            });
+
+            // 负面关键词扣分
+            if (rules.negativeKeywords) {
+                rules.negativeKeywords.forEach(keyword => {
+                    if (fullText.includes(keyword)) {
+                        score -= 25;
+                    }
+                });
+            }
+
+            // 性别匹配
+            if (rules.gender === 'male') {
+                if (voiceName.includes('男') || voiceType.includes('male') || voiceType.includes('男')) {
+                    score += 30;
+                }
+                if (voiceName.includes('女') || voiceType.includes('female') || voiceType.includes('女')) {
+                    score -= 50; // 性别不匹配严重扣分
+                }
+            } else if (rules.gender === 'female') {
+                if (voiceName.includes('女') || voiceType.includes('female') || voiceType.includes('女')) {
+                    score += 30;
+                }
+                if (voiceName.includes('男') || voiceType.includes('male') || voiceType.includes('男')) {
+                    score -= 50; // 性别不匹配严重扣分
+                }
+            }
+
+            return {
+                ...voice,
+                score: score,
+                matchDetails: {
+                    fullText: fullText,
+                    finalScore: score
+                }
+            };
+        });
+
+        // 按分数排序，选择最高分的音色
+        scoredVoices.sort((a, b) => b.score - a.score);
+
+        console.log(`🎵 [音色选择] 前3个候选音色:`, scoredVoices.slice(0, 3).map(v => ({
+            name: v.voice_name,
+            type: v.voice_type,
+            score: v.score
+        })));
+
+        if (scoredVoices.length > 0 && scoredVoices[0].score > 0) {
+            const selectedVoice = scoredVoices[0];
+            console.log(`🎵 [音色选择] 为 ${characterId} 选择音色: ${selectedVoice.voice_name} (${selectedVoice.voice_type}), 分数: ${selectedVoice.score}`);
+            return selectedVoice.voice_type;
+        }
+
+        // 如果没有合适的音色，使用默认音色
+        console.log(`🎵 [音色选择] 未找到合适音色，使用默认音色`);
+        return VOICE_CONFIG.DEFAULT_VOICE;
+    }
+
+    // 初始化角色音色
+    initializeCharacterVoices(voices) {
+        console.log('🎵 [音色初始化] 开始为所有角色分配音色...');
+
+        Object.keys(VOICE_CONFIG.CHARACTER_VOICES).forEach(characterId => {
+            const selectedVoice = this.selectVoiceForCharacter(characterId, voices);
+            VOICE_CONFIG.CHARACTER_VOICES[characterId] = selectedVoice;
+
+            const character = suspects[characterId];
+            console.log(`🎵 [音色初始化] ${character.name} (${characterId}): ${selectedVoice}`);
+        });
+    }
+
+    // 获取角色的音色
+    getVoiceForCharacter(characterId) {
+        return VOICE_CONFIG.CHARACTER_VOICES[characterId] || VOICE_CONFIG.DEFAULT_VOICE;
+    }
+
+    async textToSpeech(text, characterId = null) {
+        console.log('🎵 [语音] 开始语音合成:', text.substring(0, 50) + (text.length > 50 ? '...' : ''));
+
+        // 根据角色选择音色
+        const voiceType = characterId ? this.getVoiceForCharacter(characterId) : VOICE_CONFIG.DEFAULT_VOICE;
+        const characterName = characterId ? suspects[characterId]?.name : '系统';
+
+        console.log('🎵 [语音] API配置:', {
+            baseUrl: AI_CONFIG.BASE_URL,
+            hasApiKey: !!AI_CONFIG.API_KEY,
+            character: characterName,
+            voice: voiceType
+        });
+
         try {
+            // 使用正确的七牛云TTS格式
+            const requestBody = {
+                audio: {
+                    voice_type: voiceType,
+                    encoding: "mp3",
+                    speed_ratio: 1.0
+                },
+                request: {
+                    text: text
+                }
+            };
+
+            console.log('🎵 [语音] 发送TTS请求:', requestBody);
+
             const response = await fetch(`${AI_CONFIG.BASE_URL}/voice/tts`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${AI_CONFIG.API_KEY}`
                 },
-                body: JSON.stringify({
-                    audio: {
-                        voice_type: VOICE_CONFIG.TTS_VOICE,
-                        encoding: "mp3",
-                        speed_ratio: 1.0
-                    },
-                    request: {
-                        text: text
-                    }
-                })
+                body: JSON.stringify(requestBody)
             });
 
+            console.log('🎵 [语音] TTS响应状态:', response.status, response.statusText);
+
             if (!response.ok) {
-                throw new Error(`TTS请求失败: ${response.status}`);
+                const errorText = await response.text();
+                console.error('🎵 [语音] TTS请求失败详情:', errorText);
+                throw new Error(`TTS请求失败: ${response.status} - ${errorText}`);
             }
 
+            // 根据文档，响应是JSON格式，包含base64编码的音频数据
             const data = await response.json();
+            console.log('🎵 [语音] TTS响应数据:', {
+                reqid: data.reqid,
+                operation: data.operation,
+                sequence: data.sequence,
+                hasData: !!data.data,
+                addition: data.addition
+            });
 
-            if (data.audio_url || data.audio) {
-                await this.playAudio(data.audio_url || data.audio);
+            if (data.data) {
+                // 将base64音频数据转换为blob
+                const audioData = atob(data.data);
+                const audioArray = new Uint8Array(audioData.length);
+                for (let i = 0; i < audioData.length; i++) {
+                    audioArray[i] = audioData.charCodeAt(i);
+                }
+
+                const audioBlob = new Blob([audioArray], { type: 'audio/mp3' });
+                console.log('🎵 [语音] 创建音频blob，大小:', audioBlob.size, 'bytes');
+
+                if (data.addition && data.addition.duration) {
+                    console.log('🎵 [语音] 音频时长:', data.addition.duration, 'ms');
+                }
+
+                const audioUrl = URL.createObjectURL(audioBlob);
+                console.log('🎵 [语音] 创建音频URL:', audioUrl);
+                await this.playAudio(audioUrl);
+            } else {
+                console.warn('🎵 [语音] 响应中没有音频数据');
             }
         } catch (error) {
-            console.error('语音合成失败:', error);
+            console.error('🎵 [语音] 语音合成失败:', error);
         }
     }
 
     async playAudio(audioUrl) {
+        console.log('🔊 [音频] 开始播放音频:', audioUrl);
+
         try {
             // 停止当前播放的音频
             if (this.currentAudio) {
+                console.log('🔊 [音频] 停止当前播放的音频');
                 this.currentAudio.pause();
+                // 如果是blob URL，需要释放
+                if (this.currentAudioUrl && this.currentAudioUrl.startsWith('blob:')) {
+                    URL.revokeObjectURL(this.currentAudioUrl);
+                }
                 this.currentAudio = null;
             }
 
+            console.log('🔊 [音频] 创建新的Audio对象');
             this.currentAudio = new Audio(audioUrl);
+            this.currentAudioUrl = audioUrl;
+
+            // 添加音频事件监听器
+            this.currentAudio.addEventListener('loadstart', () => {
+                console.log('🔊 [音频] 开始加载音频');
+            });
+
+            this.currentAudio.addEventListener('canplay', () => {
+                console.log('🔊 [音频] 音频可以播放');
+            });
+
+            this.currentAudio.addEventListener('play', () => {
+                console.log('🔊 [音频] 音频开始播放');
+            });
+
+            this.currentAudio.addEventListener('ended', () => {
+                console.log('🔊 [音频] 音频播放结束');
+                // 播放结束后释放blob URL
+                if (this.currentAudioUrl && this.currentAudioUrl.startsWith('blob:')) {
+                    URL.revokeObjectURL(this.currentAudioUrl);
+                    this.currentAudioUrl = null;
+                }
+            });
+
+            this.currentAudio.addEventListener('error', (e) => {
+                console.error('🔊 [音频] 音频播放错误:', e);
+                // 出错时也要释放blob URL
+                if (this.currentAudioUrl && this.currentAudioUrl.startsWith('blob:')) {
+                    URL.revokeObjectURL(this.currentAudioUrl);
+                    this.currentAudioUrl = null;
+                }
+            });
+
             await this.currentAudio.play();
+            console.log('🔊 [音频] 音频播放成功启动');
         } catch (error) {
-            console.error('音频播放失败:', error);
+            console.error('🔊 [音频] 音频播放失败:', error);
         }
     }
 
     stopAudio() {
+        console.log('🛑 [音频] 手动停止音频播放');
         if (this.currentAudio) {
             this.currentAudio.pause();
+            // 释放blob URL
+            if (this.currentAudioUrl && this.currentAudioUrl.startsWith('blob:')) {
+                URL.revokeObjectURL(this.currentAudioUrl);
+                this.currentAudioUrl = null;
+            }
             this.currentAudio = null;
+            console.log('🛑 [音频] 音频已停止');
+        } else {
+            console.log('🛑 [音频] 没有正在播放的音频');
         }
     }
 }
@@ -291,6 +436,7 @@ const suspects = {
         name: "大盗\"鬼武\"",
         avatar: "🗡️",
         personality: "粗暴、自负、好面子",
+        voiceStyle: "粗犷低沉的男声",
         initialStatement: "哈哈哈，没错，那家伙就是老子杀的！我看上了他老婆的美貌，设计把他们骗到了竹林里。我把他绑在树上，当着他的面强暴了他老婆。那女人很刚烈，哭着喊着要我们决斗，说只能活一个。我解开了那家伙的绳子，跟他正面决斗了二十三回合！最后，我一刀刺穿了他的胸膛。他临死前的眼神？哼，那是敬佩，是败给强者的眼神。那女人趁乱跑了。至于那把值钱的匕首，当然被我拿走了，那是我的战利品！",
         secrets: {
             truth: "决斗确实发生了，但过程极其笨拙和可笑。武士吓得腿软，鬼武自己也喝多了酒，根本没有所谓的'二十三回合'。在混乱的推搡中，武士的刀断了，他跪地求饶。鬼武在羞辱他时，失手用匕首将他刺死。",
@@ -301,6 +447,7 @@ const suspects = {
         name: "花子夫人",
         avatar: "🌸",
         personality: "表面柔弱、内心冷酷、善于伪装",
+        voiceStyle: "柔美温婉的女声",
         initialStatement: "那个坏人...他把我丈夫绑起来...然后...然后对我做了那种事...我受尽了屈辱。之后，那个坏人大笑着走了。我挣扎着爬到我丈夫身边，用他身上的小刀给他割断了绳子。但是我看到他看我的眼神...那不是同情，是嫌弃，是冰冷的嫌弃！我一个被玷污的女人，怎么能承受这样的眼神？我昏过去了，等我醒来的时候，只看到我丈夫胸前插着那把小刀，已经...已经自杀了。都是我害了他...都是我...",
         secrets: {
             truth: "她早已厌倦了软弱无能的丈夫。被鬼武侵犯后，她发现这是一个摆脱丈夫的机会。她并没有哭喊，反而用语言刺激和挑拨两人，嘲笑丈夫的懦弱，赞美强盗的勇猛，一手促成了这场决斗。",
@@ -311,6 +458,7 @@ const suspects = {
         name: "金泽武弘之魂",
         avatar: "👻",
         personality: "庄严、虚伪、死要面子",
+        voiceStyle: "庄严威严的男声",
         initialStatement: "我是金泽武弘...在我妻子被那个强盗侮辱之后，那强盗解开了我的绳子。但是我无法洗刷这个耻辱。我的妻子，她用最决绝的眼神看着我，把那把家传的蓝色丝绸柄匕首递给我，示意我必须做出了断。我...我接受了我的命运。在强盗和妻子都离开后，我面向西方，用那把匕首切腹自尽，保住了最后的尊严。我的灵魂因此得到了安息。",
         secrets: {
             truth: "他根本没有切腹自尽。在决斗中，他表现得极其懦弱，刀断后立刻跪地求饶。他是被鬼武在混乱中失手杀死的。",
@@ -321,6 +469,7 @@ const suspects = {
         name: "樵夫吉二郎",
         avatar: "🪓",
         personality: "胆小、贪婪、狡猾",
+        voiceStyle: "朴实憨厚的男声",
         initialStatement: "大人，我真的是冤枉的！我就是个打柴的。今天早上，我进竹林想找个好地方砍柴，结果走着走着，就看到...就看到那具尸体躺在那里！旁边只有一把断了的刀，别的什么都没有。吓得我要死，赶紧跑去报官了。我什么都没看见，什么都没拿！",
         secrets: {
             truth: "他是唯一的全程目击者。他躲在暗处看完了整场闹剧。等所有人都走后，他起了贪念，偷走了那把价值不菲、有着蓝色丝绸柄的匕首。",
@@ -387,10 +536,50 @@ const AI_CONFIG = {
     MODEL: 'gpt-oss-120b'
 };
 
-// 语音配置
+// 语音配置 - 为不同角色配置不同音色
 const VOICE_CONFIG = {
-    TTS_VOICE: 'zh_male_M392_conversation_wvae_bigtts',
-    ASR_MODEL: 'asr'
+    // 默认音色
+    DEFAULT_VOICE: 'qiniu_zh_female_wwxkjx',
+
+    // 角色音色映射
+    CHARACTER_VOICES: {
+        'onitake': null,    // 大盗"鬼武" - 粗暴男声
+        'hana': null,       // 花子夫人 - 柔美女声  
+        'spirit': null,     // 金泽武弘之魂 - 庄严男声
+        'woodcutter': null  // 樵夫吉二郎 - 朴实男声
+    },
+
+    // 音色选择规则
+    VOICE_RULES: {
+        'onitake': {
+            keywords: ['男', 'male', '粗', '厚', '低沉', '威严', '霸气', '豪迈', '雄浑', '磁性'],
+            negativeKeywords: ['女', 'female', '柔', '甜', '温柔', '清纯'],
+            gender: 'male',
+            style: 'rough',
+            priority: ['粗', '厚', '低沉', '威严', '霸气']
+        },
+        'hana': {
+            keywords: ['女', 'female', '柔', '甜', '温柔', '清纯', '优雅', '婉约', '娇美', '动听'],
+            negativeKeywords: ['男', 'male', '粗', '厚', '低沉'],
+            gender: 'female',
+            style: 'gentle',
+            priority: ['柔', '甜', '温柔', '清纯', '优雅']
+        },
+        'spirit': {
+            keywords: ['男', 'male', '庄严', '威严', '正式', '严肃', '沉稳', '端庄', '肃穆'],
+            negativeKeywords: ['女', 'female', '柔', '甜', '活泼', '俏皮'],
+            gender: 'male',
+            style: 'formal',
+            priority: ['庄严', '威严', '正式', '严肃', '沉稳']
+        },
+        'woodcutter': {
+            keywords: ['男', 'male', '朴实', '老实', '憨厚', '平和', '淳朴', '质朴', '亲切'],
+            negativeKeywords: ['女', 'female', '威严', '霸气', '娇美'],
+            gender: 'male',
+            style: 'simple',
+            priority: ['朴实', '老实', '憨厚', '平和', '淳朴']
+        }
+    }
 };
 
 // AI对话系统
@@ -977,40 +1166,44 @@ async function sendMessage() {
         updateSuspectStatus(conversation);
 
         // 如果启用了语音，播放AI回复
-        if (game.voiceEnabled && AI_CONFIG.API_KEY !== 'YOUR_API_KEY_HERE') {
-            await game.voiceManager.textToSpeech(response);
+        console.log('🎤 [语音检查] 语音状态:', {
+            voiceEnabled: game.voiceEnabled,
+            hasApiKey: !!AI_CONFIG.API_KEY,
+            apiKeyValid: AI_CONFIG.API_KEY !== 'YOUR_API_KEY_HERE'
+        });
+
+        if (game.voiceEnabled && AI_CONFIG.API_KEY && AI_CONFIG.API_KEY !== 'YOUR_API_KEY_HERE') {
+            console.log('🎤 [语音] 开始播放AI回复语音');
+            await game.voiceManager.textToSpeech(response, game.currentSuspect);
+        } else {
+            let reason = '';
+            if (!game.voiceEnabled) {
+                reason = '语音功能未启用 - 请勾选"启用语音回复"';
+            } else if (!AI_CONFIG.API_KEY) {
+                reason = '缺少API密钥';
+            } else if (AI_CONFIG.API_KEY === 'YOUR_API_KEY_HERE') {
+                reason = 'API密钥无效';
+            }
+            console.log('🎤 [语音] 跳过语音播放 -', reason);
         }
     } catch (error) {
         thinkingMsg.textContent = '对话出现错误，请重试。';
     }
 }
 
-function toggleRecording() {
-    const recordBtn = document.getElementById('voice-record');
 
-    if (!game.voiceManager.isRecording) {
-        game.voiceManager.startRecording().then(success => {
-            if (success) {
-                recordBtn.classList.add('recording');
-                recordBtn.textContent = '🔴';
-                recordBtn.title = '停止录音';
-            }
-        });
-    } else {
-        game.voiceManager.stopRecording();
-        recordBtn.classList.remove('recording');
-        recordBtn.textContent = '🎤';
-        recordBtn.title = '语音输入';
-    }
-}
 
 function updateAPIKey() {
     const apiKeyInput = document.getElementById('api-key-input');
     const apiKey = apiKeyInput.value.trim();
 
+    console.log('🔑 [API密钥] 更新API密钥:', apiKey ? `${apiKey.substring(0, 10)}...` : '(空)');
+
     if (apiKey) {
         AI_CONFIG.API_KEY = apiKey;
-        console.log('API密钥已更新');
+        console.log('🔑 [API密钥] API密钥已更新，语音功能可用');
+    } else {
+        console.log('🔑 [API密钥] 未提供API密钥，语音功能不可用');
     }
 }
 
@@ -1039,8 +1232,25 @@ function presentEvidence(evidenceId) {
             updateSuspectStatus(conversation);
 
             // 如果启用了语音，播放AI回复
-            if (game.voiceEnabled && AI_CONFIG.API_KEY !== 'YOUR_API_KEY_HERE') {
-                await game.voiceManager.textToSpeech(response);
+            console.log('🎤 [语音检查] 证据出示后语音状态:', {
+                voiceEnabled: game.voiceEnabled,
+                hasApiKey: !!AI_CONFIG.API_KEY,
+                apiKeyValid: AI_CONFIG.API_KEY !== 'YOUR_API_KEY_HERE'
+            });
+
+            if (game.voiceEnabled && AI_CONFIG.API_KEY && AI_CONFIG.API_KEY !== 'YOUR_API_KEY_HERE') {
+                console.log('🎤 [语音] 开始播放证据回应语音');
+                await game.voiceManager.textToSpeech(response, game.currentSuspect);
+            } else {
+                let reason = '';
+                if (!game.voiceEnabled) {
+                    reason = '语音功能未启用 - 请勾选"启用语音回复"';
+                } else if (!AI_CONFIG.API_KEY) {
+                    reason = '缺少API密钥';
+                } else if (AI_CONFIG.API_KEY === 'YOUR_API_KEY_HERE') {
+                    reason = 'API密钥无效';
+                }
+                console.log('🎤 [语音] 跳过证据回应语音播放 -', reason);
             }
         } catch (error) {
             thinkingMsg.textContent = '对话出现错误，请重试。';
@@ -1273,7 +1483,24 @@ function showResult(isCorrect, killer, method, motive) {
 }
 
 // 事件监听器
-document.addEventListener('DOMContentLoaded', function () {
+document.addEventListener('DOMContentLoaded', async function () {
+    // 初始化语音功能
+    if (AI_CONFIG.API_KEY && AI_CONFIG.API_KEY !== 'YOUR_API_KEY_HERE') {
+        console.log('🎵 [初始化] 开始获取音色列表...');
+        const voices = await game.voiceManager.getVoiceList();
+
+        if (voices.length > 0) {
+            // 为所有角色分配合适的音色
+            game.voiceManager.initializeCharacterVoices(voices);
+
+            // 设置默认音色
+            VOICE_CONFIG.DEFAULT_VOICE = voices[0].voice_type;
+            console.log('🎵 [初始化] 音色分配完成');
+        } else {
+            console.log('🎵 [初始化] 未获取到音色列表，使用默认配置');
+        }
+    }
+
     // 开始调查按钮
     document.getElementById('start-investigation').addEventListener('click', () => {
         updateAPIKey();
@@ -1337,16 +1564,17 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    // 语音录音按钮
-    document.getElementById('voice-record').addEventListener('click', toggleRecording);
+
 
     // 语音开关
     document.getElementById('voice-enabled').addEventListener('change', (e) => {
         game.voiceEnabled = e.target.checked;
+        console.log('🎛️ [语音开关] 语音功能已', game.voiceEnabled ? '启用' : '禁用');
     });
 
     // 停止音频按钮
     document.getElementById('stop-audio').addEventListener('click', () => {
+        console.log('🛑 [用户操作] 用户点击停止音频按钮');
         game.voiceManager.stopAudio();
     });
 
