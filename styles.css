@@ -1036,6 +1036,33 @@ body.briefing-open {
     border: 2px solid #34495e;
 }
 
+/* 情绪边框颜色（列表头像与右侧大头像共用） */
+.suspect-chat-card .suspect-image.emotion-calm,
+#current-suspect-image.emotion-calm {
+    border-color: #27ae60;
+    box-shadow: 0 0 8px rgba(39, 174, 96, 0.4);
+}
+.suspect-chat-card .suspect-image.emotion-tense,
+#current-suspect-image.emotion-tense {
+    border-color: #f39c12;
+    box-shadow: 0 0 8px rgba(243, 156, 18, 0.4);
+}
+.suspect-chat-card .suspect-image.emotion-anxious,
+#current-suspect-image.emotion-anxious {
+    border-color: #e67e22;
+    box-shadow: 0 0 8px rgba(230, 126, 34, 0.4);
+}
+.suspect-chat-card .suspect-image.emotion-panic,
+#current-suspect-image.emotion-panic {
+    border-color: #e74c3c;
+    box-shadow: 0 0 8px rgba(231, 76, 60, 0.4);
+}
+.suspect-chat-card .suspect-image.emotion-breakdown,
+#current-suspect-image.emotion-breakdown {
+    border-color: #c0392b;
+    box-shadow: 0 0 8px rgba(192, 57, 43, 0.45);
+}
+
 .suspect-chat-card .suspect-avatar {
     position: absolute;
     bottom: -3px;
@@ -1466,6 +1493,7 @@ body.briefing-open {
     border-left: 1px solid rgba(255,255,255,0.1);
     min-width: 320px;
     transition: flex-basis 0.3s ease;
+    min-height: 0; /* 允许子元素产生内部滚动 */
 }
 
 /* 现场调查信息组件 */
@@ -1481,6 +1509,7 @@ body.briefing-open {
     display: flex;
     flex-direction: column;
     flex: 1;
+    min-height: 0; /* 允许消息列表在容器内滚动 */
 }
 
 .scene-chat-header {
@@ -1503,6 +1532,8 @@ body.briefing-open {
     display: flex;
     flex-direction: column;
     gap: 15px;
+    max-height: 50vh; /* 记录区域独立滚动高度 */
+    overscroll-behavior: contain;
 }
 
 .scene-chat-message {
@@ -2812,6 +2843,7 @@ body.briefing-open {
     border-radius: 20px;
     cursor: pointer;
     font-size: 12px;
+    pointer-events: auto;
     transition: all 0.3s ease;
 }
 
@@ -2821,10 +2853,7 @@ body.briefing-open {
     box-shadow: 0 4px 8px rgba(52, 152, 219, 0.3);
 }
 
-.evidence-btn:before {
-    content: "📋";
-    font-size: 14px;
-}
+
 
 /* 响应式设计 */
 @media (max-width: 768px) {

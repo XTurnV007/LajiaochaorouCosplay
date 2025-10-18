@@ -282,12 +282,25 @@ class GameState {
     }
 
     updateEvidenceDisplay() {
+        console.log('🔄 updateEvidenceDisplay called, evidence count:', this.evidence.length);
         const evidenceList = document.getElementById('evidence-list');
         const availableEvidence = document.getElementById('available-evidence');
+        const chatAvailableEvidence = document.getElementById('chat-available-evidence');
+
+        console.log('📦 Elements found:', {
+            evidenceList: !!evidenceList,
+            availableEvidence: !!availableEvidence,
+            chatAvailableEvidence: !!chatAvailableEvidence,
+            chatAvailableEvidenceContent: chatAvailableEvidence ? chatAvailableEvidence.innerHTML : 'N/A'
+        });
 
         if (this.evidence.length === 0) {
+            console.log('📭 No evidence found');
             evidenceList.innerHTML = '<p class="no-evidence">暂无发现的证物</p>';
+            if (availableEvidence) availableEvidence.innerHTML = '<span>可出示证据：暂无证据</span>';
+            if (chatAvailableEvidence) chatAvailableEvidence.innerHTML = '<span>可出示证据：暂无证据</span>';
         } else {
+            console.log('📋 Processing evidence items:', this.evidence.length);
             evidenceList.innerHTML = this.evidence.map(e =>
                 `<div class="evidence-item" data-evidence="${e.id}">
                     ${e.image ? `<img src="${e.image}" alt="${e.name}" class="evidence-image">` : ''}
@@ -297,14 +310,90 @@ class GameState {
                     </div>
                 </div>`
             ).join('');
-        }
 
-        // 更新审问界面的可用证据
-        if (availableEvidence) {
-            const evidenceButtons = this.evidence.map(e =>
-                `<button class="evidence-btn" data-evidence="${e.id}">${e.name}</button>`
-            ).join('');
-            availableEvidence.innerHTML = '<span>可出示证据：</span>' + evidenceButtons;
+            // 更新审问界面证据工具栏
+            if (availableEvidence) {
+                console.log('🔧 Updating interrogation evidence toolbar');
+                const evidenceButtons = this.evidence.map(e =>
+                    `<button class="evidence-btn" data-evidence="${e.id}" title="${e.description}">
+                        <span>${e.name}</span>
+                    </button>`
+                ).join('');
+                availableEvidence.innerHTML = evidenceButtons;
+                console.log('✅ Interrogation evidence buttons generated:', this.evidence.length);
+
+                // 重新绑定事件监听器（防重复绑定）
+                if (!availableEvidence.__bound) {
+                    availableEvidence.__bound = true;
+                    availableEvidence.addEventListener('click', (e) => {
+                    console.log('🎯 Available evidence container clicked, target:', e.target);
+
+                    // 检查点击的元素或其父元素是否是evidence-btn
+                    let evidenceBtn = null;
+                    if (e.target.classList.contains('evidence-btn')) {
+                        evidenceBtn = e.target;
+                    } else if (e.target.parentElement && e.target.parentElement.classList.contains('evidence-btn')) {
+                        evidenceBtn = e.target.parentElement;
+                    }
+
+                    if (evidenceBtn) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                        const evidenceId = evidenceBtn.dataset.evidence;
+                        console.log('🔧 Available evidence button clicked:', evidenceId);
+                        presentEvidence(evidenceId);
+                    } else {
+                        console.log('❌ Available container click - not an evidence button or its child');
+                    }
+                    });
+                }
+            }
+
+            // 更新聊天界面证据工具栏
+            if (chatAvailableEvidence) {
+                console.log('💬 Updating chat evidence toolbar');
+                console.log('📋 Evidence items for chat:', this.evidence.map(e => ({ id: e.id, name: e.name })));
+                const chatEvidenceButtons = this.evidence.map(e =>
+                    `<button class="evidence-btn" data-evidence="${e.id}" title="${e.description}">
+                        <span>${e.name}</span>
+                    </button>`
+                ).join('');
+                console.log('🔧 Generated HTML:', chatEvidenceButtons);
+                chatAvailableEvidence.innerHTML = chatEvidenceButtons;
+                console.log('✅ Chat evidence buttons generated:', this.evidence.length);
+                console.log('📦 Final chat container content:', chatAvailableEvidence.innerHTML);
+
+            // 重新绑定事件监听器（防重复绑定）
+            if (!chatAvailableEvidence.__bound) {
+                chatAvailableEvidence.__bound = true;
+                chatAvailableEvidence.addEventListener('click', (e) => {
+                    console.log('🎯 Chat evidence container clicked, target:', e.target);
+                    console.log('🎯 Target classes:', e.target.classList);
+                    console.log('🎯 Target parent:', e.target.parentElement);
+                    console.log('🎯 Parent classes:', e.target.parentElement?.classList);
+
+                    // 检查点击的元素或其父元素是否是evidence-btn
+                    let evidenceBtn = null;
+                    if (e.target.classList.contains('evidence-btn')) {
+                        evidenceBtn = e.target;
+                    } else if (e.target.parentElement && e.target.parentElement.classList.contains('evidence-btn')) {
+                        evidenceBtn = e.target.parentElement;
+                    }
+
+                    if (evidenceBtn) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const evidenceId = evidenceBtn.dataset.evidence;
+                        console.log('💬 Chat evidence button clicked:', evidenceId);
+                        presentEvidence(evidenceId);
+                    } else {
+                        console.log('❌ Chat container click - not an evidence button or its child');
+                    }
+                });
+            }
+            } else {
+                console.log('❌ Chat available evidence element not found');
+            }
         }
     }
 }
@@ -1198,10 +1287,15 @@ function showPanel(panelId) {
     
     // 如果切换到嫌疑人面板，同步语音状态
     if (panelId === 'suspects-panel') {
+        console.log('🎯 切换到嫌疑人面板:', panelId);
         setTimeout(() => {
-            console.log('🎯 切换到嫌疑人面板，当前语音状态:', game.voiceEnabled);
+            console.log('🎯 嫌疑人面板激活，当前语音状态:', game.voiceEnabled);
+            console.log('📋 证据数量:', game.evidence.length);
             syncAllVoiceCheckboxes();
             console.log('✅ 嫌疑人面板语音状态已同步完成');
+            // 确保证据显示正确
+            game.updateEvidenceDisplay();
+            console.log('🔄 证据显示已更新');
         }, 50);
     }
 }
@@ -1257,27 +1351,32 @@ function updateSuspectStatus(conversation) {
     }
 
     // 根据压力等级显示不同的状态
-    let stressLabel, emotion, textColor;
+    let stressLabel, emotion, textColor, emotionKey;
     if (stressLevel <= 1) {
         stressLabel = '平静';
         emotion = '😐 平静';
         textColor = '#27ae60';
+        emotionKey = 'calm';
     } else if (stressLevel <= 2) {
         stressLabel = '紧张';
         emotion = '😟 紧张';
         textColor = '#f39c12';
+        emotionKey = 'tense';
     } else if (stressLevel <= 3) {
         stressLabel = '焦虑';
         emotion = '😰 焦虑';
         textColor = '#e67e22';
+        emotionKey = 'anxious';
     } else if (stressLevel <= 4) {
         stressLabel = '恐慌';
         emotion = '😨 恐慌';
         textColor = '#e74c3c';
+        emotionKey = 'panic';
     } else {
         stressLabel = '崩溃';
         emotion = '😱 崩溃';
         textColor = '#c0392b';
+        emotionKey = 'breakdown';
     }
 
     if (stressText) {
@@ -1290,12 +1389,29 @@ function updateSuspectStatus(conversation) {
         emotionIndicator.style.backgroundColor = `${textColor}20`;
         emotionIndicator.style.border = `1px solid ${textColor}`;
     }
+
+    // 同步右侧面板头像情绪样式（如果存在）
+    const rightImage = document.getElementById('current-suspect-image');
+    if (rightImage) {
+        const classesToRemove = ['emotion-calm','emotion-tense','emotion-anxious','emotion-panic','emotion-breakdown'];
+        rightImage.classList.remove(...classesToRemove);
+        rightImage.classList.add(`emotion-${emotionKey}`);
+    }
 }
 
 // 在聊天界面中开始审问
 function startChatInterrogation(suspectId) {
+    console.log('🎯 startChatInterrogation called with suspectId:', suspectId);
+    console.log('📋 Current game state:', {
+        currentSuspect: game.currentSuspect,
+        evidenceCount: game.evidence.length,
+        conversations: Object.keys(game.conversations)
+    });
+
     game.currentSuspect = suspectId;
     const suspect = suspects[suspectId];
+    console.log('👤 Set currentSuspect to:', game.currentSuspect);
+    console.log('🧑 Suspect info:', suspect);
 
     // 更新聊天头部信息
     const chatName = document.getElementById('current-chat-name');
@@ -1457,27 +1573,32 @@ function updateChatSuspectStatus(conversation) {
     }
 
     // 根据压力等级显示不同的状态
-    let stressLabel, emotion, textColor;
+    let stressLabel, emotion, textColor, emotionKey;
     if (stressLevel <= 1) {
         stressLabel = '平静';
         emotion = '😐 平静';
         textColor = '#27ae60';
+        emotionKey = 'calm';
     } else if (stressLevel <= 2) {
         stressLabel = '紧张';
         emotion = '😟 紧张';
         textColor = '#f39c12';
+        emotionKey = 'tense';
     } else if (stressLevel <= 3) {
         stressLabel = '焦虑';
         emotion = '😰 焦虑';
         textColor = '#e67e22';
+        emotionKey = 'anxious';
     } else if (stressLevel <= 4) {
         stressLabel = '恐慌';
         emotion = '😨 恐慌';
         textColor = '#e74c3c';
+        emotionKey = 'panic';
     } else {
         stressLabel = '崩溃';
         emotion = '😱 崩溃';
         textColor = '#c0392b';
+        emotionKey = 'breakdown';
     }
 
     if (stressText) {
@@ -1490,37 +1611,73 @@ function updateChatSuspectStatus(conversation) {
         emotionIndicator.style.backgroundColor = `${textColor}20`;
         emotionIndicator.style.border = `1px solid ${textColor}`;
     }
+
+    // 更新左侧列表当前卡片的情绪样式
+    const currentCard = document.querySelector(`.suspect-chat-card[data-suspect="${game.currentSuspect}"] .suspect-image`);
+    if (currentCard) {
+        const classesToRemove = ['emotion-calm','emotion-tense','emotion-anxious','emotion-panic','emotion-breakdown'];
+        currentCard.classList.remove(...classesToRemove);
+        currentCard.classList.add(`emotion-${emotionKey}`);
+    }
 }
 
 // 在聊天界面中添加消息
 function addChatMessage(type, content) {
+    console.log('💬 addChatMessage called:', { type, content });
     const messagesContainer = document.getElementById('chat-messages');
+    console.log('📦 Chat messages container found:', !!messagesContainer);
+    if (!messagesContainer) {
+        console.log('❌ Chat messages container not found!');
+        return;
+    }
     const messageDiv = document.createElement('div');
     messageDiv.className = `message ${type}`;
     messageDiv.textContent = content;
     messagesContainer.appendChild(messageDiv);
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    console.log('✅ Chat message added successfully');
 }
 
 function addMessage(type, content) {
+    console.log('💬 addMessage called:', { type, content });
     const messagesContainer = document.getElementById('chat-messages');
+    console.log('📦 Messages container found:', !!messagesContainer);
+    if (!messagesContainer) {
+        console.log('❌ Messages container not found!');
+        return;
+    }
     const messageDiv = document.createElement('div');
     messageDiv.className = `message ${type}`;
     messageDiv.textContent = content;
     messagesContainer.appendChild(messageDiv);
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    console.log('✅ Message added successfully');
 }
 
 async function sendMessage() {
+    console.log('💬 sendMessage called');
     const input = document.getElementById('chat-input');
     const message = input.value.trim();
+    console.log('📝 Input message:', message);
 
-    if (!message || !game.currentSuspect) return;
+    if (!message || !game.currentSuspect) {
+        console.log('❌ Empty message or no current suspect:', { message: !!message, currentSuspect: !!game.currentSuspect });
+        return;
+    }
+
+    console.log('✅ Proceeding with message send');
 
     input.value = '';
-    
+
     // 根据当前界面选择合适的添加消息函数
-    const isInChatInterface = document.querySelector('.suspects-chat-container');
+    const chatEvidenceElement = document.querySelector('#chat-available-evidence');
+    const isInChatInterface = !!chatEvidenceElement;
+    console.log('📱 sendMessage interface detection:', {
+        chatEvidenceExists: !!chatEvidenceElement,
+        chatEvidenceContent: chatEvidenceElement ? chatEvidenceElement.innerHTML : 'N/A',
+        currentSuspect: game.currentSuspect,
+        evidenceCount: game.evidence.length
+    });
     const addMessageFunc = isInChatInterface ? addChatMessage : addMessage;
     
     addMessageFunc('player', message);
@@ -1602,11 +1759,34 @@ function updateAPIKey() {
 
 // 出示证据功能
 function presentEvidence(evidenceId) {
+    console.log('🔍 presentEvidence called with evidenceId:', evidenceId);
     const evidence = game.evidence.find(e => e.id === evidenceId);
-    if (!evidence || !game.currentSuspect) return;
+    console.log('📋 Found evidence:', evidence);
+    console.log('👤 Current suspect:', game.currentSuspect);
+
+    if (!evidence) {
+        console.log('❌ Evidence not found for id:', evidenceId);
+        return;
+    }
+
+    if (!game.currentSuspect) {
+        console.log('❌ No current suspect set');
+        return;
+    }
+
+    console.log('✅ Proceeding with evidence presentation');
 
     // 根据当前界面选择合适的添加消息函数
-    const isInChatInterface = document.querySelector('.suspects-chat-container');
+    const chatEvidenceElement = document.querySelector('#chat-available-evidence');
+    const isInChatInterface = !!chatEvidenceElement;
+    console.log('🏠 presentEvidence interface detection:', {
+        chatAvailableEvidenceExists: !!chatEvidenceElement,
+        chatAvailableEvidenceContent: chatEvidenceElement ? chatEvidenceElement.innerHTML : 'N/A',
+        suspectsChatContainer: !!document.querySelector('.suspects-chat-container'),
+        currentPanel: document.querySelector('.panel.active')?.id,
+        isInChatInterface: isInChatInterface
+    });
+
     const addMessageFunc = isInChatInterface ? addChatMessage : addMessage;
 
     addMessageFunc('system', `你出示了证据：${evidence.name}`);
@@ -1615,7 +1795,13 @@ function presentEvidence(evidenceId) {
     const thinkingMsg = document.createElement('div');
     thinkingMsg.className = 'message npc';
     thinkingMsg.textContent = '思考中...';
-    document.getElementById('chat-messages').appendChild(thinkingMsg);
+
+    // 根据当前界面选择正确的消息容器
+    const messagesContainer = document.getElementById('chat-messages');
+
+    if (messagesContainer) {
+        messagesContainer.appendChild(thinkingMsg);
+    }
 
     setTimeout(async () => {
         try {
@@ -1847,12 +2033,12 @@ function adjustHotspotPositions() {
     
     // 热点原始位置数据（相对于图片的百分比位置）
     const hotspotData = {
-        'hotspot-body': { x: 52, y: 58, width: 8, height: 12 },
-        'hotspot-sword': { x: 45, y: 70, width: 6, height: 8 },
-        'hotspot-trees': { x: 76, y: 34, width: 8, height: 15 },
-        'hotspot-ground': { x: 68, y: 87, width: 10, height: 6 },
-        'hotspot-flowers': { x: 8, y: 75, width: 12, height: 12 },
-        'hotspot-rope': { x: 50, y: 65, width: 6, height: 8 }
+        'hotspot-body': { x: 48, y: 58, width: 8, height: 12 },
+        'hotspot-sword': { x: 45, y: 85, width: 6, height: 8 },
+        'hotspot-trees': { x: 80, y: 34, width: 8, height: 15 },
+        'hotspot-ground': { x: 75, y: 90, width: 10, height: 6 },
+        'hotspot-flowers': { x: 12, y: 75, width: 12, height: 12 },
+        'hotspot-rope': { x: 53, y: 68, width: 6, height: 8 }
     };
     
     // 更新每个热点的位置
@@ -1860,11 +2046,13 @@ function adjustHotspotPositions() {
         const hotspot = document.getElementById(id);
         if (!hotspot) return;
         
-        // 计算相对于容器的实际位置
-        const left = offsetX + (data.x / 100) * imageRect.width;
-        const top = offsetY + (data.y / 100) * imageRect.height;
-        const width = Math.max((data.width / 100) * imageRect.width, 40);
-        const height = Math.max((data.height / 100) * imageRect.height, 40);
+		// 计算相对于容器的实际位置（使用中心点定位）
+		const width = Math.max((data.width / 100) * imageRect.width, 40);
+		const height = Math.max((data.height / 100) * imageRect.height, 40);
+		const centerX = offsetX + (data.x / 100) * imageRect.width;
+		const centerY = offsetY + (data.y / 100) * imageRect.height;
+		const left = centerX - width / 2;
+		const top = centerY - height / 2;
         
         // 应用位置和尺寸
         hotspot.style.left = `${left}px`;
@@ -2080,6 +2268,12 @@ document.addEventListener('DOMContentLoaded', async function () {
     document.querySelectorAll('.suspect-chat-card').forEach(card => {
         card.addEventListener('click', (e) => {
             const suspectId = card.dataset.suspect;
+            console.log('🖱️ Suspect card clicked:', {
+                suspectId,
+                card: e.target,
+                cardClasses: e.target.classList,
+                cardDataset: e.target.dataset
+            });
             startChatInterrogation(suspectId);
         });
     });
@@ -2151,13 +2345,6 @@ document.addEventListener('DOMContentLoaded', async function () {
         game.voiceManager.stopAudio();
     });
 
-    // 证据出示（事件委托）
-    document.addEventListener('click', (e) => {
-        if (e.target.classList.contains('evidence-btn')) {
-            const evidenceId = e.target.dataset.evidence;
-            presentEvidence(evidenceId);
-        }
-    });
 
     // 初始化游戏
     game.updateEvidenceDisplay();
@@ -2174,4 +2361,37 @@ document.addEventListener('DOMContentLoaded', async function () {
     console.log('对话记录数量:', Object.keys(game.conversations).length);
     console.log('当前session ID:', game.sessionId);
     console.log('是否已看过封面:', game.hasSeenCover);
+
+    // 检查DOM元素
+    console.log('🔍 Checking DOM elements:');
+    console.log('- chat-messages:', !!document.getElementById('chat-messages'));
+    const chatEvidenceElement = document.getElementById('chat-available-evidence');
+    console.log('- chat-available-evidence:', !!chatEvidenceElement);
+    console.log('- chat-available-evidence content:', chatEvidenceElement ? chatEvidenceElement.innerHTML : 'N/A');
+    console.log('- available-evidence:', !!document.getElementById('available-evidence'));
+    console.log('- suspects-chat-container:', !!document.querySelector('.suspects-chat-container'));
+    console.log('- active panel:', document.querySelector('.panel.active')?.id);
+    console.log('- evidence buttons count:', document.querySelectorAll('.evidence-btn').length);
+    console.log('- evidence buttons details:', Array.from(document.querySelectorAll('.evidence-btn')).map(btn => ({
+        id: btn.dataset.evidence,
+        text: btn.textContent,
+        classes: btn.classList.toString()
+    })));
+
+    // 添加测试按钮来手动添加证据（用于调试）
+    const testEvidenceBtn = document.createElement('button');
+    testEvidenceBtn.textContent = '添加测试证据';
+    testEvidenceBtn.style.cssText = 'position: fixed; top: 10px; right: 10px; z-index: 9999; padding: 10px; background: red; color: white;';
+    testEvidenceBtn.addEventListener('click', () => {
+        console.log('🧪 Adding test evidence...');
+        const testEvidence = {
+            id: 'test_evidence',
+            name: '测试证据',
+            description: '这是一个测试证据',
+            image: null
+        };
+        game.addEvidence(testEvidence);
+        console.log('✅ Test evidence added');
+    });
+    document.body.appendChild(testEvidenceBtn);
 });
